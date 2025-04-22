@@ -112,9 +112,13 @@ export function useImportPropertiesFromCsv() {
   return useMutation({
     mutationFn: async (csvData: string) => {
       try {
+        console.log("Sending CSV import request");
         const res = await apiRequest("POST", "/api/property/import-csv", { csvData });
-        return await res.json();
+        const data = await res.json();
+        console.log("CSV import response:", data);
+        return data;
       } catch (error: any) {
+        console.error("CSV import error in hook:", error);
         // Extract the detailed error message from the response if available
         if (error.response && error.response.data) {
           const errorData = error.response.data;
@@ -127,6 +131,7 @@ export function useImportPropertiesFromCsv() {
       }
     },
     onSuccess: (data) => {
+      console.log("CSV import successful:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/property"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/overview"] });
       toast({
@@ -135,6 +140,7 @@ export function useImportPropertiesFromCsv() {
       });
     },
     onError: (error: Error) => {
+      console.error("CSV import error toast:", error);
       toast({
         title: "Error importing properties",
         description: error.message,

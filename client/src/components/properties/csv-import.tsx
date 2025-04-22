@@ -104,12 +104,15 @@ export function CsvImport({ onSuccess }: CsvImportProps) {
     }
     
     try {
-      await importCsv.mutateAsync(csvData);
+      console.log("Importing CSV data:", csvData.substring(0, 100) + "...");
+      const result = await importCsv.mutateAsync(csvData);
+      console.log("Import result:", result);
       setError(""); // Clear any previous errors
       if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
+      console.error("CSV import error:", err);
       const errorMsg = err instanceof Error ? err.message : String(err);
       
       // Try to extract more detailed error information if available
@@ -203,7 +206,7 @@ MountainRetreat,Cozy Mountain Cabin,Cabin,456 Pine Trail, Aspen CO 81611,https:/
           Load Sample
         </Button>
         <Button 
-          onClick={handleImport} 
+          onClick={() => handleImport()} 
           disabled={importCsv.isPending || isValidating || !csvData.trim()}
         >
           {importCsv.isPending ? (
