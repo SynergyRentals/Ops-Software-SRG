@@ -202,23 +202,126 @@ export async function syncPropertyIcal(req: Request, res: Response) {
       return res.status(400).json({ message: 'Property does not have an iCal URL configured' });
     }
     
-    // In a real implementation, we would fetch and parse the iCal file here
-    // For this example, we'll simulate a successful sync
-    await storage.updateProperty(propertyId, {
-      updatedAt: new Date()
-    });
+    const ical = require('node-ical');
+    const fetch = require('node-fetch');
     
-    res.status(200).json({
-      message: 'iCal sync completed successfully',
-      property: {
-        id: property.id,
-        nickname: property.nickname,
-        icalUrl: property.icalUrl,
-        lastSynced: new Date().toISOString()
+    try {
+      // Fetch iCal data from URL
+      const response = await fetch(property.icalUrl);
+      
+      if (!response.ok) {
+        return res.status(400).json({ 
+          message: `Failed to fetch iCal data from URL: ${response.statusText}` 
+        });
       }
-    });
-  } catch (error) {
+      
+      const icalData = await response.text();
+      
+      // Parse iCal data
+      const events = ical.parseICS(icalData);
+      
+      // Mark property as updated
+      await storage.updateProperty(propertyId, {
+        nickname: property.nickname // Just update any field to trigger updatedAt
+      });
+      
+      // Return the parsed events
+      const parsedEvents = Object.values(events)
+        .filter((event: any) => event.type === 'VEVENT')
+        .map((event: any) => ({
+          uid: event.uid,
+          summary: event.summary,
+          description: event.description,
+          start: event.start,
+          end: event.end,
+          status: event.status
+        }));
+      
+      res.status(200).json({
+        message: 'iCal sync completed successfully',
+        property: {
+          id: property.id,
+          nickname: property.nickname,
+          icalUrl: property.icalUrl,
+          lastSynced: new Date().toISOString()
+        },
+        events: parsedEvents
+      });
+    } catch (icalError: any) {
+      console.error(`Error parsing iCal data for property ${propertyId}:`, icalError);
+      return res.status(400).json({ 
+        message: 'Failed to parse iCal data', 
+        error: icalError.message 
+      });
+    }
+  } catch (error: any) {
     console.error(`Error syncing iCal for property ${req.params.id}:`, error);
     res.status(500).json({ message: 'Failed to sync iCal', error: error.message });
+  }
+}
+
+// Get iCal events for a property
+export async function getPropertyIcalEvents(req: Request, res: Response) {
+  try {
+    const propertyId = Number(req.params.id);
+    const property = await storage.getProperty(propertyId);
+    
+    if (!property) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+    
+    if (!property.icalUrl) {
+      return res.status(400).json({ message: 'Property does not have an iCal URL configured' });
+    }
+    
+    const ical = require('node-ical');
+    const fetch = require('node-fetch');
+    
+    try {
+      // Fetch iCal data from URL
+      const response = await fetch(property.icalUrl);
+      
+      if (!response.ok) {
+        return res.status(400).json({ 
+          message: `Failed to fetch iCal data from URL: ${response.statusText}` 
+        });
+      }
+      
+      const icalData = await response.text();
+      
+      // Parse iCal data
+      const events = ical.parseICS(icalData);
+      
+      // Format events for calendar display
+      const formattedEvents = Object.values(events)
+        .filter((event: any) => event.type === 'VEVENT')
+        .map((event: any) => ({
+          id: event.uid,
+          title: event.summary || 'Unavailable',
+          description: event.description || '',
+          start: event.start,
+          end: event.end || new Date(event.start.getTime() + 86400000), // Default to 1 day if no end
+          allDay: !event.end || (
+            event.start.getHours() === 0 && 
+            event.start.getMinutes() === 0 && 
+            event.end.getHours() === 0 && 
+            event.end.getMinutes() === 0
+          ),
+          status: event.status || 'CONFIRMED',
+          propertyId: propertyId,
+          propertyName: property.nickname
+        }));
+      
+      res.status(200).json(formattedEvents);
+    } catch (icalError: any) {
+      console.error(`Error parsing iCal data for property ${propertyId}:`, icalError);
+      return res.status(400).json({ 
+        message: 'Failed to parse iCal data', 
+        error: icalError.message 
+      });
+    }
+  } catch (error: any) {
+    console.error(`Error fetching iCal events for property ${req.params.id}:`, error);
+    res.status(500).json({ message: 'Failed to fetch iCal events', error: error.message });
   }
 }

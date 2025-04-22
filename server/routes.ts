@@ -49,6 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/property/:id", isAuthenticated, hasRole(["admin"]), propertyController.deleteProperty);
   app.post("/api/property/import-csv", isAuthenticated, hasRole(["admin"]), propertyController.importPropertiesFromCsv);
   app.get("/api/property/:id/ical-sync", isAuthenticated, propertyController.syncPropertyIcal);
+  app.get("/api/property/:id/ical-events", isAuthenticated, propertyController.getPropertyIcalEvents);
   
   // Maintenance routes
   app.get("/api/maintenance", isAuthenticated, maintenanceController.getMaintenanceTasks);

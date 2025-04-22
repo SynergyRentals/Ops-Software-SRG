@@ -12,10 +12,11 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AiSchedulerDialog } from "./ai-scheduler-dialog";
+import { PropertyCalendar } from "./property-calendar";
 
 export function Scheduler() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [activeView, setActiveView] = useState<string>("calendar");
+  const [activeView, setActiveView] = useState<string>("property-calendar");
   const [showAiDialog, setShowAiDialog] = useState<boolean>(false);
   const { data: properties, isLoading: propertiesLoading } = useProperties();
   const { data: tasks, isLoading: tasksLoading } = useMaintenanceTasks();
@@ -69,11 +70,18 @@ export function Scheduler() {
 
       <Tabs value={activeView} onValueChange={setActiveView}>
         <TabsList>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+          <TabsTrigger value="property-calendar">Property Calendars</TabsTrigger>
+          <TabsTrigger value="maintenance-calendar">Maintenance Calendar</TabsTrigger>
           <TabsTrigger value="list">List View</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="calendar" className="mt-4">
+        {/* Property Calendar View - NEW */}
+        <TabsContent value="property-calendar" className="mt-4">
+          <PropertyCalendar view="week" />
+        </TabsContent>
+        
+        {/* Original Calendar View - Renamed to Maintenance Calendar */}
+        <TabsContent value="maintenance-calendar" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="md:col-span-1">
               <CardHeader>
