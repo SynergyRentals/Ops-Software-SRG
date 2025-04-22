@@ -1,0 +1,159 @@
+/* Custom Calendar Styles */
+.property-calendar {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 200px repeat(7, 1fr);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.calendar-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 650px;
+  overflow-y: auto;
+}
+
+.property-row {
+  display: grid;
+  grid-template-columns: 200px repeat(7, 1fr);
+  min-height: 120px;
+}
+
+.property-row:not(:last-child) {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-cell {
+  padding: 10px;
+  background-color: #f8fafc;
+  text-align: center;
+  font-weight: 600;
+  border-right: 1px solid #e2e8f0;
+}
+
+.property-column {
+  border-right: 1px solid #e2e8f0;
+  padding: 8px;
+  background-color: #f8fafc;
+}
+
+.property-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.property-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.property-address {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.day-column {
+  border-right: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.day-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.day-date {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.cell {
+  padding: 8px;
+  min-height: 120px;
+}
+
+.today {
+  background-color: rgba(14, 165, 233, 0.1);
+}
+
+.today-cell {
+  background-color: rgba(14, 165, 233, 0.05);
+}
+
+.event-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-card {
+  border-radius: 6px;
+  padding: 8px;
+  background-color: white;
+  border-left: 4px solid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.event-card.bg-green-500 {
+  border-left-color: #22c55e;
+}
+
+.event-card.bg-blue-500 {
+  border-left-color: #3b82f6;
+}
+
+.event-card.bg-yellow-500 {
+  border-left-color: #eab308;
+}
+
+.event-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.event-status {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.event-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Status colors */
+.bg-green-500 {
+  background-color: #f0fdf4;
+}
+
+.bg-blue-500 {
+  background-color: #eff6ff;
+}
+
+.bg-yellow-500 {
+  background-color: #fefce8;
+}
+
+.bg-gray-500 {
+  background-color: #f8fafc;
+}

@@ -1,173 +1,176 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { MaintenanceTask, InsertMaintenanceTask } from "@shared/schema";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { toast } from '@/hooks/use-toast';
+import { MaintenanceTask } from '@shared/schema';
 
-export function useMaintenanceTasks(filters?: {
-  propertyId?: number;
-  status?: string;
-  urgency?: string;
-}) {
+// Create the hook for fetching a single maintenance task
+export function useMaintenanceTask(id: number) {
+  return useQuery<MaintenanceTask>({
+    queryKey: [`/api/maintenance/${id}`],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/maintenance/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch maintenance task');
+      }
+      return response.json();
+    },
+    enabled: id > 0  // Only run this query if we have a valid ID
+  });
+}
+
+// Create the hook for fetching multiple maintenance tasks
+export function useMaintenanceTasks(propertyId?: number, status?: string, urgency?: string) {
   const queryParams = new URLSearchParams();
-  if (filters?.propertyId) queryParams.append("propertyId", filters.propertyId.toString());
-  if (filters?.status) queryParams.append("status", filters.status);
-  if (filters?.urgency) queryParams.append("urgency", filters.urgency);
-
-  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
-
-  return useQuery<MaintenanceTask[], Error>({
-    queryKey: ["/api/maintenance", queryString],
-    select: (data) => {
-      // Ensure we always return an array even if the API returns null or undefined
-      return Array.isArray(data) ? data : [];
+  
+  if (propertyId) queryParams.append('propertyId', propertyId.toString());
+  if (status) queryParams.append('status', status);
+  if (urgency) queryParams.append('urgency', urgency);
+  
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  
+  return useQuery<MaintenanceTask[]>({
+    queryKey: ['/api/maintenance', propertyId, status, urgency],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/maintenance${queryString}`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch maintenance tasks');
+      }
+      
+      return response.json();
     }
   });
 }
 
-export function useMaintenanceTask(id: number) {
-  return useQuery<MaintenanceTask, Error>({
-    queryKey: [`/api/maintenance/${id}`],
-    enabled: !!id,
-  });
-}
-
+// Function to create a new maintenance task
 export function useCreateMaintenanceTask() {
-  const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async (task: InsertMaintenanceTask) => {
-      const res = await apiRequest("POST", "/api/maintenance", task);
-      return await res.json();
+    mutationFn: async (taskData: Omit<MaintenanceTask, 'id' | 'createdAt'>) => {
+      const response = await apiRequest('POST', '/api/maintenance', taskData);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create maintenance task');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/overview"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
-        title: "Task created",
-        description: "Maintenance task has been created successfully.",
+        title: 'Task Created',
+        description: 'The maintenance task has been created successfully',
+        variant: 'default'
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error creating task",
-        description: error.message,
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to create maintenance task',
+        variant: 'destructive'
       });
-    },
+    }
   });
 }
 
+// Function to update an existing maintenance task
 export function useUpdateMaintenanceTask() {
-  const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async ({
-      id,
-      task,
-    }: {
-      id: number;
-      task: Partial<InsertMaintenanceTask>;
-    }) => {
-      const res = await apiRequest("PATCH", `/api/maintenance/${id}`, task);
-      return await res.json();
+    mutationFn: async ({ id, ...data }: { id: number, [key: string]: any }) => {
+      const response = await apiRequest('PATCH', `/api/maintenance/${id}`, data);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update maintenance task');
+      }
+      
+      return response.json();
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/maintenance/${variables.id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/overview"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
-        title: "Task updated",
-        description: "Maintenance task has been updated successfully.",
+        title: 'Task Updated',
+        description: 'The maintenance task has been updated successfully',
+        variant: 'default'
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error updating task",
-        description: error.message,
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to update maintenance task',
+        variant: 'destructive'
       });
-    },
+    }
   });
 }
 
+// Function to delete a maintenance task
 export function useDeleteMaintenanceTask() {
-  const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/maintenance/${id}`);
+      const response = await apiRequest('DELETE', `/api/maintenance/${id}`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete maintenance task');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/overview"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
-        title: "Task deleted",
-        description: "Maintenance task has been deleted successfully.",
+        title: 'Task Deleted',
+        description: 'The maintenance task has been deleted',
+        variant: 'default'
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error deleting task",
-        description: error.message,
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to delete maintenance task',
+        variant: 'destructive'
       });
-    },
+    }
   });
 }
 
+// Hook for AI-generated schedule suggestions
 export function useScheduleSuggestions() {
-  const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async (params: {
-      propertyId: number;
-      taskTitle: string;
-      taskDescription: string;
-      urgency: string;
-      availabilityWindows: Array<{ start: string; end: string }>;
-    }) => {
-      const res = await apiRequest("POST", "/api/schedule", params);
-      return await res.json();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error getting schedule suggestions",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-export function useCreateScheduledTask() {
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (params: {
-      title: string;
-      description: string;
-      propertyId: number;
-      assignedTo?: number;
-      urgency: string;
-      suggestedSlot: { start: string; end: string };
-    }) => {
-      const res = await apiRequest("POST", "/api/schedule/task", params);
-      return await res.json();
+    mutationFn: async (data: { propertyId: number }) => {
+      const response = await apiRequest('POST', '/api/schedule/ai-suggestions', data);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate schedule suggestions');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/overview"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
-        title: "Task scheduled",
-        description: "Maintenance task has been scheduled successfully using AI suggestions.",
+        title: 'Suggestions Generated',
+        description: 'AI-powered schedule suggestions have been generated',
+        variant: 'default'
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error scheduling task",
-        description: error.message,
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to generate schedule suggestions',
+        variant: 'destructive'
       });
-    },
+    }
   });
 }
