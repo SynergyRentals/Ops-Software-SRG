@@ -42,6 +42,7 @@ export default function Properties() {
   };
 
   const handleImportCsv = () => {
+    setActiveTab('import');
     navigate('/properties?action=import');
   };
 
