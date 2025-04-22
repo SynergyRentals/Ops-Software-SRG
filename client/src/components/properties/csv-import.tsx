@@ -21,6 +21,13 @@ export function CsvImport({ onSuccess }: CsvImportProps) {
     setError("");
     
     try {
+      // Check if CSV has content
+      if (!data.trim()) {
+        setError("CSV data is empty");
+        setIsValidating(false);
+        return false;
+      }
+      
       // Check if CSV has headers
       const lines = data.trim().split("\n");
       if (lines.length < 2) {
@@ -29,8 +36,29 @@ export function CsvImport({ onSuccess }: CsvImportProps) {
         return false;
       }
       
+      // Process headers - handle potential quoted CSV fields
+      const headerLine = lines[0];
+      const headers: string[] = [];
+      let currentField = "";
+      let inQuotes = false;
+      
+      for (let i = 0; i < headerLine.length; i++) {
+        const char = headerLine[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          headers.push(currentField.trim().toLowerCase());
+          currentField = "";
+        } else {
+          currentField += char;
+        }
+      }
+      
+      // Add the last field
+      headers.push(currentField.trim().toLowerCase());
+      
       // Check for required headers
-      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
       const requiredHeaders = ["nickname", "title", "type", "address"];
       
       for (const required of requiredHeaders) {
@@ -41,12 +69,16 @@ export function CsvImport({ onSuccess }: CsvImportProps) {
         }
       }
       
-      // Validate each row has the right number of columns
-      const headerCount = headers.length;
+      // A more lenient check for rows - since complex CSV with quotes and commas can be hard to validate here
+      // We'll do a basic check for non-empty rows
       for (let i = 1; i < lines.length; i++) {
-        const rowData = lines[i].split(",");
-        if (rowData.length !== headerCount) {
-          setError(`Row ${i+1} has ${rowData.length} columns, expected ${headerCount}`);
+        if (!lines[i].trim()) {
+          continue; // Skip empty lines
+        }
+        
+        // Simple check to ensure row has some content
+        if (lines[i].split(",").every(field => !field.trim())) {
+          setError(`Row ${i+1} appears to be empty`);
           setIsValidating(false);
           return false;
         }
@@ -73,13 +105,36 @@ export function CsvImport({ onSuccess }: CsvImportProps) {
     
     try {
       await importCsv.mutateAsync(csvData);
+      setError(""); // Clear any previous errors
       if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
-      setError("Error importing CSV: " + (err as Error).message);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      
+      // Try to extract more detailed error information if available
+      let detailedError = errorMsg;
+      try {
+        if (errorMsg.includes('{')) {
+          const errorJson = JSON.parse(errorMsg.substring(errorMsg.indexOf('{')));
+          if (errorJson.error) {
+            detailedError = errorJson.error;
+          }
+        }
+      } catch {
+        // If parsing fails, stick with the original error
+      }
+      
+      setError("Error importing CSV: " + detailedError);
     }
   };
+
+  // Clear success message when CSV data changes
+  useEffect(() => {
+    if (importCsv.isSuccess && csvData) {
+      importCsv.reset();
+    }
+  }, [csvData]);
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const pastedText = e.clipboardData.getData('text');

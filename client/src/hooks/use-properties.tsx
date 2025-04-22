@@ -111,8 +111,20 @@ export function useImportPropertiesFromCsv() {
 
   return useMutation({
     mutationFn: async (csvData: string) => {
-      const res = await apiRequest("POST", "/api/property/import-csv", { csvData });
-      return await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/property/import-csv", { csvData });
+        return await res.json();
+      } catch (error: any) {
+        // Extract the detailed error message from the response if available
+        if (error.response && error.response.data) {
+          const errorData = error.response.data;
+          throw new Error(
+            errorData.message || 
+            (errorData.error ? `${errorData.message}: ${errorData.error}` : 'Failed to import CSV')
+          );
+        }
+        throw error;
+      }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/property"] });

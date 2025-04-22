@@ -122,43 +122,69 @@ export async function importPropertiesFromCsv(req: Request, res: Response) {
     const records: PropertyCsvData[] = [];
     
     // Use csv-parse to parse the CSV data
-    csv.parse(csvData, {
+    const parser = csv.parse(csvData, {
       columns: true,
-      skip_empty_lines: true
-    }, async (err, output) => {
-      if (err) {
-        return res.status(400).json({ message: 'Failed to parse CSV data', error: err.message });
-      }
+      skip_empty_lines: true,
+      trim: true
+    });
+    
+    // Promisify the parsing process
+    const output = await new Promise<any[]>((resolve, reject) => {
+      const results: any[] = [];
       
-      // Validate and transform each record
-      for (const record of output) {
-        try {
-          // Convert numeric fields
-          if (record.beds) record.beds = Number(record.beds);
-          if (record.baths) record.baths = Number(record.baths);
-          
-          // Validate with Zod schema
-          const validatedRecord = propertyCsvSchema.parse(record);
-          records.push(validatedRecord);
-        } catch (error) {
-          return res.status(400).json({ 
-            message: 'Invalid CSV data format', 
-            error: error.message 
-          });
+      parser.on('readable', function() {
+        let record;
+        while ((record = parser.read()) !== null) {
+          results.push(record);
         }
-      }
-      
-      // Import validated records
-      const importedProperties = await storage.importPropertiesFromCsv(records);
-      
-      res.status(201).json({
-        message: `Successfully imported ${importedProperties.length} properties`,
-        properties: importedProperties
       });
+      
+      parser.on('error', function(err) {
+        reject(err);
+      });
+      
+      parser.on('end', function() {
+        resolve(results);
+      });
+    }).catch(err => {
+      throw new Error(`Failed to parse CSV data: ${err.message}`);
+    });
+    
+    // Validate and transform each record
+    for (const record of output) {
+      try {
+        // Convert numeric fields - handle empty strings case
+        const transformedRecord = {...record};
+        
+        if (transformedRecord.beds !== undefined) {
+          transformedRecord.beds = transformedRecord.beds === '' ? null : Number(transformedRecord.beds);
+        }
+        
+        if (transformedRecord.baths !== undefined) {
+          transformedRecord.baths = transformedRecord.baths === '' ? null : Number(transformedRecord.baths);
+        }
+        
+        // Validate with Zod schema
+        const validatedRecord = propertyCsvSchema.parse(transformedRecord);
+        records.push(validatedRecord);
+      } catch (error) {
+        return res.status(400).json({ 
+          message: 'Invalid CSV data format', 
+          error: `Error in row with data: ${JSON.stringify(record)}: ${(error as Error).message}` 
+        });
+      }
+    }
+    
+    // Import validated records
+    const importedProperties = await storage.importPropertiesFromCsv(records);
+    
+    res.status(201).json({
+      message: `Successfully imported ${importedProperties.length} properties`,
+      properties: importedProperties
     });
   } catch (error) {
     console.error('Error importing properties from CSV:', error);
-    res.status(500).json({ message: 'Failed to import properties', error: error.message });
+    res.status(500).json({ message: 'Failed to import properties', error: (error as Error).message });
   }
 }
 
