@@ -13,6 +13,10 @@ import * as scheduleController from "./controllers/scheduleController";
 import * as dashboardController from "./controllers/dashboardController";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve the property viewer HTML page
+  app.get('/property-viewer', (req, res) => {
+    res.sendFile('property_viewer.html', { root: './' });
+  });
   // Setup authentication
   await setupAuth(app);
   
