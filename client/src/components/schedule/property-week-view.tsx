@@ -312,11 +312,11 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
                             {dayEvents.map((event: EventCard) => (
                               <div 
                                 key={event.id} 
-                                className={`event-card ${getStatusColor(event.status)}`}
+                                className={`event-card ${getEventColor(event)}`}
                               >
                                 <div className="event-header">
                                   <span className="event-status">
-                                    {getStatusIcon(event.status)}
+                                    {getStatusIcon(event)}
                                     <span className="capitalize text-xs mr-1">{event.status}</span>
                                   </span>
                                   {event.priority === 'high' && (
@@ -325,15 +325,24 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
                                 </div>
                                 <h4 className="event-title">{event.title}</h4>
                                 <div className="event-details">
-                                  <div className="flex items-center text-xs">
-                                    <User className="h-3 w-3 mr-1" />
-                                    <span>{event.assignedTo}</span>
-                                  </div>
-                                  {event.dueTime && (
+                                  {event.type === 'reservation' ? (
                                     <div className="flex items-center text-xs">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      <span>Due: {event.dueTime}</span>
+                                      <Calendar className="h-3 w-3 mr-1" />
+                                      <span>Reservation</span>
                                     </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center text-xs">
+                                        <User className="h-3 w-3 mr-1" />
+                                        <span>{event.assignedTo}</span>
+                                      </div>
+                                      {event.dueTime && (
+                                        <div className="flex items-center text-xs">
+                                          <Clock className="h-3 w-3 mr-1" />
+                                          <span>Due: {event.dueTime}</span>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </div>

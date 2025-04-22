@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { storage } from '../storage';
 import { InsertProperty, propertyCsvSchema, PropertyCsvData } from '@shared/schema';
 import * as csv from 'csv-parse';
-import * as ical from 'node-ical';
+import ical from 'node-ical';
 import fetch from 'node-fetch';
 
 // Get all properties

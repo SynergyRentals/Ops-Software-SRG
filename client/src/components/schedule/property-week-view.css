@@ -101,6 +101,12 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Reservation styling */
+.event-card.bg-red-200 {
+  border-left: 4px solid #f87171;
+  background-color: rgba(254, 226, 226, 0.6);
+}
+
 .event-card.bg-green-500 {
   border-left-color: #22c55e;
 }
