@@ -1,0 +1,68 @@
+/* Custom styles for the property calendar */
+
+/* Main container style */
+.calendar-container {
+  /* Ensure the calendar takes up full space */
+  height: 100%;
+  width: 100%;
+}
+
+/* Resource header styling */
+.resource-header {
+  font-weight: 600;
+  padding: 4px;
+  display: block;
+}
+
+/* Style for the resource cells (property rows) */
+.rbc-resource {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Enhance the all-day event styling */
+.rbc-event {
+  padding: 2px 5px;
+  margin: 2px 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.rbc-event:hover {
+  opacity: 1;
+}
+
+/* Make resource headers (property names) on the left wider */
+.rbc-time-header-content {
+  min-width: 160px;
+}
+
+/* Style time grid to ensure property names are visible */
+.rbc-time-view .rbc-row {
+  min-height: 30px;
+}
+
+/* Make dates in the header more prominent */
+.rbc-header {
+  font-weight: bold;
+  padding: 10px 0;
+  background-color: #f3f4f6;
+}
+
+/* Highlight current day */
+.rbc-day-slot.rbc-today {
+  background-color: rgba(15, 118, 110, 0.05);
+}
+
+/* Ensure the time slots have proper height */
+.rbc-timeslot-group {
+  min-height: 50px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* Adjust resource labels */
+.rbc-resource-header {
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  padding-left: 8px;
+}

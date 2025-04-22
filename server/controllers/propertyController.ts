@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { storage } from '../storage';
 import { InsertProperty, propertyCsvSchema, PropertyCsvData } from '@shared/schema';
 import * as csv from 'csv-parse';
+import * as ical from 'node-ical';
+import fetch from 'node-fetch';
 
 // Get all properties
 export async function getProperties(req: Request, res: Response) {
@@ -202,9 +204,6 @@ export async function syncPropertyIcal(req: Request, res: Response) {
       return res.status(400).json({ message: 'Property does not have an iCal URL configured' });
     }
     
-    const ical = require('node-ical');
-    const fetch = require('node-fetch');
-    
     try {
       // Fetch iCal data from URL
       const response = await fetch(property.icalUrl);
@@ -273,9 +272,6 @@ export async function getPropertyIcalEvents(req: Request, res: Response) {
     if (!property.icalUrl) {
       return res.status(400).json({ message: 'Property does not have an iCal URL configured' });
     }
-    
-    const ical = require('node-ical');
-    const fetch = require('node-fetch');
     
     try {
       // Fetch iCal data from URL

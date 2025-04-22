@@ -3,13 +3,16 @@ import { useProperties } from "@/hooks/use-properties";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Views, dateFnsLocalizer } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
+import { format, parse, startOfWeek, getDay, addDays } from "date-fns";
 import { enUS } from 'date-fns/locale';
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Property } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+
+// Import custom CSS to override react-big-calendar styles
+import "./property-calendar.css";
 
 // Date localizer setup for react-big-calendar
 const localizer = dateFnsLocalizer({
@@ -33,6 +36,13 @@ interface CalendarEvent {
   propertyId: number;
   propertyName: string;
   resourceId?: number;
+}
+
+// Define custom resource type
+interface PropertyResource {
+  id: number;
+  title: string;
+  propertyId: number;
 }
 
 interface PropertyCalendarProps {
@@ -62,7 +72,7 @@ export function PropertyCalendar({ view = "week", defaultDate = new Date() }: Pr
         ...event,
         start: new Date(event.start),
         end: new Date(event.end),
-        resourceId: property.id // Set resourceId for react-big-calendar
+        resourceId: property.id // This property corresponds to the resource ID
       }));
     } catch (error) {
       console.error(`Error fetching events for property ${property.id}:`, error);
@@ -126,16 +136,25 @@ export function PropertyCalendar({ view = "week", defaultDate = new Date() }: Pr
   };
   
   // Generate resources for each property
-  const resources = useMemo(() => {
+  const resources: PropertyResource[] = useMemo(() => {
     return properties?.map(property => ({
       id: property.id,
       title: property.nickname,
+      propertyId: property.id
     })) || [];
   }, [properties]);
   
   // Handle date navigation
   const handleNavigate = (newDate: Date) => {
     setViewDate(newDate);
+  };
+  
+  // Components for customizing the calendar layout
+  const components = {
+    // This helps the calendar display dates on top with properties on the left
+    resourceHeader: ({ resource }: { resource: PropertyResource }) => (
+      <span className="resource-header">{resource.title}</span>
+    )
   };
   
   return (
@@ -166,21 +185,25 @@ export function PropertyCalendar({ view = "week", defaultDate = new Date() }: Pr
             No properties found. Add properties with iCal URLs to see their calendars.
           </div>
         ) : (
-          <div className="h-[600px]">
+          <div className="h-[600px] calendar-container">
             <Calendar
               localizer={localizer}
               events={events}
-              defaultView={Views.WEEK}
+              defaultView="week"
               defaultDate={defaultDate}
               startAccessor="start"
               endAccessor="end"
-              // For resource ID mapping
-              resourceIdAccessor={(event: CalendarEvent) => event.resourceId || 0}
+              resourceIdAccessor="id"
               resourceTitleAccessor="title"
               resources={resources}
               date={viewDate}
               onNavigate={handleNavigate}
-              views={['day', 'week', 'month']}
+              views={{
+                day: true,
+                week: true,
+                month: true,
+              }}
+              components={components}
               eventPropGetter={eventStyleGetter}
               tooltipAccessor={(event) => `${event.title} - ${event.description || "No description"}`}
             />
