@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useProperties } from "@/hooks/use-properties";
 import { getPropertyTypeClass } from "@/lib/utils";
-import { Plus, UploadCloud } from "lucide-react";
+import { Plus, UploadCloud, Edit } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -120,10 +120,14 @@ export function PropertyList() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm"
-                        onClick={() => navigate(`/properties?action=edit&id=${property.id}`)}
+                        onClick={() => {
+                          console.log("Dashboard Edit button clicked for property:", property.id);
+                          window.location.href = `/properties?action=edit&id=${property.id}`;
+                        }}
                       >
+                        <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </Button>
                     </TableCell>

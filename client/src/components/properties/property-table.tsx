@@ -28,6 +28,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Property } from "@shared/schema";
 import { getPropertyTypeClass } from "@/lib/utils";
@@ -69,6 +79,27 @@ export function PropertyTable({ data }: PropertyTableProps) {
     } else {
       alert("This property does not have an iCal URL configured");
     }
+  };
+
+  // State for delete confirmation dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+
+  const handleDeleteClick = (property: Property) => {
+    setPropertyToDelete(property);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (propertyToDelete) {
+      await deleteProperty.mutateAsync(propertyToDelete.id);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleEditProperty = (property: Property) => {
+    console.log("Editing property with ID:", property.id);
+    window.location.href = `/properties?action=edit&id=${property.id}`;
   };
 
   const columns: ColumnDef<Property>[] = [
@@ -127,72 +158,59 @@ export function PropertyTable({ data }: PropertyTableProps) {
       ),
     },
     {
-      id: "actions",
+      id: "edit",
+      header: "Edit",
       cell: ({ row }) => {
         const property = row.original;
         
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                asChild
-              >
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start px-2"
-                  onClick={() => {
-                    console.log("Edit button clicked for property:", property.id);
-                    navigate(`/properties?action=edit&id=${property.id}`);
-                  }}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Property
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                asChild
-              >
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start px-2"
-                  onClick={() => handleSyncIcal(property)}
-                  disabled={!property.icalUrl || syncIcal.isPending}
-                >
-                  {syncIcal.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Calendar className="mr-2 h-4 w-4" />
-                  )}
-                  Sync iCal
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                asChild
-              >
-                <Button 
-                  variant="ghost"
-                  className="w-full justify-start px-2 text-red-600 hover:text-red-600 focus:text-red-600"
-                  onClick={() => handleDeleteProperty(property)}
-                  disabled={deleteProperty.isPending}
-                >
-                  {deleteProperty.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                  )}
-                  Delete Property
-                </Button>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline" 
+            size="sm"
+            onClick={() => handleEditProperty(property)}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const property = row.original;
+        
+        return (
+          <div className="flex space-x-2">
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={() => handleSyncIcal(property)}
+              disabled={!property.icalUrl || syncIcal.isPending}
+            >
+              {syncIcal.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Calendar className="mr-2 h-4 w-4" />
+              )}
+              Sync
+            </Button>
+            <Button
+              variant="outline" 
+              size="sm"
+              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+              onClick={() => handleDeleteClick(property)}
+              disabled={deleteProperty.isPending}
+            >
+              {deleteProperty.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete
+            </Button>
+          </div>
         );
       },
     },
@@ -295,6 +313,33 @@ export function PropertyTable({ data }: PropertyTableProps) {
           </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete{" "}
+              <span className="font-semibold">{propertyToDelete?.nickname}</span>{" "}
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              {deleteProperty.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
