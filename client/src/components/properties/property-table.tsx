@@ -143,37 +143,53 @@ export function PropertyTable({ data }: PropertyTableProps) {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate(`/properties?action=edit&id=${property.id}`);
-                }}
+                asChild
               >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Property
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start px-2"
+                  onClick={() => {
+                    console.log("Edit button clicked for property:", property.id);
+                    navigate(`/properties?action=edit&id=${property.id}`);
+                  }}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Property
+                </Button>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => handleSyncIcal(property)}
-                disabled={!property.icalUrl || syncIcal.isPending}
+                asChild
               >
-                {syncIcal.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Calendar className="mr-2 h-4 w-4" />
-                )}
-                Sync iCal
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start px-2"
+                  onClick={() => handleSyncIcal(property)}
+                  disabled={!property.icalUrl || syncIcal.isPending}
+                >
+                  {syncIcal.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Calendar className="mr-2 h-4 w-4" />
+                  )}
+                  Sync iCal
+                </Button>
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-red-600 focus:text-red-600"
-                onClick={() => handleDeleteProperty(property)}
-                disabled={deleteProperty.isPending}
+                asChild
               >
-                {deleteProperty.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                Delete Property
+                <Button 
+                  variant="ghost"
+                  className="w-full justify-start px-2 text-red-600 hover:text-red-600 focus:text-red-600"
+                  onClick={() => handleDeleteProperty(property)}
+                  disabled={deleteProperty.isPending}
+                >
+                  {deleteProperty.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Delete Property
+                </Button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
