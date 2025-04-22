@@ -35,7 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials) => {
       try {
         const res = await apiRequest("POST", "/api/login", credentials);
-        // Check if there's actually a body to parse
+        
+        // Check status first - if not successful, handle the error
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Authentication failed");
+        }
+        
+        // If successful, check for JSON content
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           return await res.json();
@@ -44,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error: any) {
         console.error("Login failed:", error);
         // Convert the error to a proper Error object
-        throw new Error(error?.message || "Login failed");
+        throw new Error(error.message || "Login failed");
       }
     },
     onSuccess: (user: SelectUser | null) => {
@@ -75,7 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials) => {
       try {
         const res = await apiRequest("POST", "/api/register", credentials);
-        // Check if there's actually a body to parse
+        
+        // Check status first - if not successful, handle the error
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Registration failed");
+        }
+        
+        // If successful, check for JSON content
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           return await res.json();
@@ -84,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error: any) {
         console.error("Registration failed:", error);
         // Convert the error to a proper Error object
-        throw new Error(error?.message || "Registration failed");
+        throw new Error(error.message || "Registration failed");
       }
     },
     onSuccess: (user: SelectUser | null) => {
