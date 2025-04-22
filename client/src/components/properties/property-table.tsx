@@ -99,7 +99,17 @@ export function PropertyTable({ data }: PropertyTableProps) {
 
   const handleEditProperty = (property: Property) => {
     console.log("Editing property with ID:", property.id);
-    window.location.href = `/properties?action=edit&id=${property.id}`;
+    // Instead of using window.location.href, let's navigate via a different method
+    // that forces a reload and proper parsing of URL parameters
+    const url = `/properties?action=edit&id=${property.id}`;
+    
+    // Force navigation with state refresh to ensure proper URL parameter handling
+    navigate(url, { replace: true });
+    
+    // Fallback method if the navigate doesn't work
+    setTimeout(() => {
+      window.location.href = url;
+    }, 100);
   };
 
   const columns: ColumnDef<Property>[] = [

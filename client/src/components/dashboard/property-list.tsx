@@ -124,7 +124,16 @@ export function PropertyList() {
                         size="sm"
                         onClick={() => {
                           console.log("Dashboard Edit button clicked for property:", property.id);
-                          window.location.href = `/properties?action=edit&id=${property.id}`;
+                          // Force navigation with state refresh to ensure proper URL parameter handling
+                          const url = `/properties?action=edit&id=${property.id}`;
+                          
+                          // Navigate using both methods to ensure it works
+                          navigate(url, { replace: true });
+                          
+                          // Fallback to direct location change after a short delay
+                          setTimeout(() => {
+                            window.location.href = url;
+                          }, 100);
                         }}
                       >
                         <Edit className="mr-2 h-4 w-4" />

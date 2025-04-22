@@ -17,14 +17,25 @@ export default function Properties() {
   const [editPropertyId, setEditPropertyId] = useState<number | null>(null);
   const { data: properties, isLoading } = useProperties();
   const { data: editProperty, isLoading: propertyLoading } = useProperty(editPropertyId || 0);
+  
+  // Log when edit property data changes
+  useEffect(() => {
+    if (editProperty) {
+      console.log("Edit property data loaded:", editProperty);
+    }
+  }, [editProperty]);
 
   // Parse URL params to determine which tab to show
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.split('?')[1] || '');
+    // Get the full URL from the window
+    const fullUrl = window.location.href;
+    const parsedUrl = new URL(fullUrl);
+    const searchParams = parsedUrl.searchParams;
+    
     const action = searchParams.get('action');
     const id = searchParams.get('id');
     
-    console.log("URL params:", { action, id, location });
+    console.log("URL params (from window.location):", { action, id, location });
     
     if (action === 'create') {
       setActiveTab('create');
