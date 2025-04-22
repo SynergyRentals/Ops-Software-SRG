@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EditPropertyDialog } from "./edit-property-dialog";
 
 interface PropertyTableProps {
   data: Property[];
@@ -64,14 +65,12 @@ export function PropertyTable({ data }: PropertyTableProps) {
   const [rowSelection, setRowSelection] = useState({});
   const [_, navigate] = useLocation();
   
+  // State for property editing dialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [propertyToEdit, setPropertyToEdit] = useState<Property | null>(null);
+  
   const deleteProperty = useDeleteProperty();
   const syncIcal = useSyncPropertyIcal(0); // Will be set when syncing a specific property
-
-  const handleDeleteProperty = async (property: Property) => {
-    if (window.confirm(`Are you sure you want to delete ${property.nickname}?`)) {
-      await deleteProperty.mutateAsync(property.id);
-    }
-  };
 
   const handleSyncIcal = async (property: Property) => {
     if (property.icalUrl) {
@@ -98,18 +97,9 @@ export function PropertyTable({ data }: PropertyTableProps) {
   };
 
   const handleEditProperty = (property: Property) => {
-    console.log("Editing property with ID:", property.id);
-    // Instead of using window.location.href, let's navigate via a different method
-    // that forces a reload and proper parsing of URL parameters
-    const url = `/properties?action=edit&id=${property.id}`;
-    
-    // Force navigation with state refresh to ensure proper URL parameter handling
-    navigate(url, { replace: true });
-    
-    // Fallback method if the navigate doesn't work
-    setTimeout(() => {
-      window.location.href = url;
-    }, 100);
+    console.log("Opening edit dialog for property:", property.id);
+    setPropertyToEdit(property);
+    setIsEditDialogOpen(true);
   };
 
   const columns: ColumnDef<Property>[] = [
@@ -350,6 +340,19 @@ export function PropertyTable({ data }: PropertyTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Property Dialog */}
+      {propertyToEdit && (
+        <EditPropertyDialog
+          property={propertyToEdit}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSuccess={() => {
+            // Refresh the properties list after updating
+            setIsEditDialogOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

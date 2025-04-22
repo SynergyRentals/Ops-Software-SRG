@@ -15,6 +15,9 @@ import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Property } from "@shared/schema";
+import { EditPropertyDialog } from "../properties/edit-property-dialog";
 
 export function PropertyList() {
   const [_, navigate] = useLocation();
