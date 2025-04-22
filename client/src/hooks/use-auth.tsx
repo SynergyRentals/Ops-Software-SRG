@@ -38,7 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Check status first - if not successful, handle the error
         if (!res.ok) {
-          const errorData = await res.json();
+          const errorData = await res.json().catch(() => ({ message: "Authentication failed" }));
+          console.error("API request failed:", { status: res.status, statusText: res.statusText, url: res.url, data: errorData });
           throw new Error(errorData.message || "Authentication failed");
         }
         
@@ -85,7 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Check status first - if not successful, handle the error
         if (!res.ok) {
-          const errorData = await res.json();
+          const errorData = await res.json().catch(() => ({ message: "Registration failed" }));
+          console.error("API request failed:", { status: res.status, statusText: res.statusText, url: res.url, data: errorData });
           throw new Error(errorData.message || "Registration failed");
         }
         
