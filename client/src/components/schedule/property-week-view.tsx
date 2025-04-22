@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format, addDays, startOfWeek, isToday, isSameDay } from "date-fns";
 import { Property, MaintenanceTask } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar, CalendarRange } from "lucide-react";
+import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -380,7 +380,7 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
                                         <span>Reservation</span>
                                       </div>
                                       <div className="flex items-center text-xs">
-                                        <CalendarRange className="h-3 w-3 mr-1" />
+                                        <Clock className="h-3 w-3 mr-1" />
                                         <span>{format(new Date(event.start), 'MMM d')} - {format(new Date(event.end), 'MMM d')}</span>
                                       </div>
                                     </>
