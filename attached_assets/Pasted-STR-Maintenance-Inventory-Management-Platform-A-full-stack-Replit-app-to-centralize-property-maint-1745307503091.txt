@@ -1,0 +1,147 @@
+STR Maintenance & Inventory Management Platform
+A full-stack Replit app to centralize property maintenance tasks, AI-assisted scheduling, and supply inventory management for short-term rentals. This platform empowers hosts and teams to streamline daily operations, automate routine jobs, and keep units well-supplied with minimal manual tracking.
+
+Modules
+Dashboard
+
+Daily/weekly consolidated view of maintenance + inventory tasks
+High‑level project progress widgets
+Schedule
+
+CRUD for Properties (upload via CSV → import to Property table)
+iCal sync for each property
+AI-powered maintenance & delivery scheduling (LLM integration)
+Maintenance
+
+Ingest HostAI and SuiteOp maintenance tasks via webhooks
+Render maintenance tasks as cards, sortable by urgency, team assignment
+Smart scheduling component embedded in each card
+Inventory
+
+Cleaner-driven supply requests per unit (QR-triggered)
+Central inventory stock tracking
+Automated purchasing workflow when thresholds hit
+Scaffolding & Kick-Off Instructions
+1. Tech Stack
+Backend: Node.js + TypeScript (Express, tsx)
+Frontend: React (Vite), shadcn/ui for components, tailwindcss for styling
+Database: SQLite (via Prisma ORM)
+State Management: React Query (TanStack)
+API Authentication: JWT-based, .env for secrets (roles: admin, cleaner, team)
+Scheduling AI: Integrate OpenAI (POST /api/schedule, return suggested slots/tasks)
+CI/Deploy: Use Replit-native CI to lint/test/build on push (Optional: Scaffold GitHub Actions pipeline in .github/workflows/ci.yml)
+2. Folder Structure
+/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── webhooks/
+│   │   ├── utils/
+│   │   └── db/
+│   ├── tests/
+│   ├── .env.example
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   └── utils/
+│   ├── public/
+│   ├── tailwind.config.js
+│   ├── shadcn.config.js
+│   └── package.json
+├── prisma/
+│   └── schema.prisma
+├── .env.example
+├── .gitignore
+├── README.md
+├── replit.nix
+├── .replit
+├── scripts/
+│   └── start-replit.sh
+└── .github/
+    └── workflows/ci.yml        # Optional: Only if GitHub Actions desired
+3. API & Webhook Endpoints
+Auth:
+POST /api/auth/login
+POST /api/auth/register
+Property CRUD:
+GET /api/property
+POST /api/property
+POST /api/property/import-csv
+Accepts CSV with columns: nickname,title,type,address,icalUrl,tags
+GET /api/property/:id/ical-sync
+Maintenance Tasks:
+GET /api/maintenance
+POST /api/maintenance (Manual or AI-assisted scheduling)
+PATCH /api/maintenance/:id
+DELETE /api/maintenance/:id
+Scheduling AI:
+POST /api/schedule (Input: desired window, returns OpenAI-suggested slots/tasks)
+Webhooks:
+POST /api/webhooks/hostai
+POST /api/webhooks/suiteop
+Inventory:
+GET /api/inventory/:propertyId
+POST /api/inventory/supply-request (QR-triggered by cleaners)
+PATCH /api/inventory/stock/:sku
+POST /api/inventory/auto-purchase (system trigger)
+Dashboard:
+GET /api/dashboard/overview
+GET /api/dashboard/progress-widgets
+Authentication:
+All API routes require JWT auth middleware with role check.
+All webhook endpoints require a secret token (from .env) for validation.
+
+4. UI Component Strategy
+shadcn/ui for controls, lists, cards, dialogs
+Dashboard: Data cards, progress, trend widgets (minimal charts/graphs)
+Schedule: Table, calendar view, property import (CSV drop/upload), iCal connect
+Maintenance: Kanban board for tasks; detail modals with AI scheduling suggestion
+Inventory: Stock table, supply request form (simulate QR), restock threshold modal
+5. Database Schema Outline
+(Prisma, SQLite – keep naming consistent: “Property”, “MaintenanceTask”, “InventoryItem”, “SupplyRequest”, “WebhookEvent”, “User”)
+
+User (id, email, role, passwordHash, ...)
+Property (id, nickname, title, type, address, icalUrl, tags, ...)
+MaintenanceTask (id, type, propertyId, assignedTo, urgency, status, dueDate, source, ...)
+InventoryItem (id, propertyId, sku, name, currentStock, threshold, ...)
+SupplyRequest (id, propertyId, requestedBy, items, status, createdAt, ...)
+WebhookEvent (id, source, payload, receivedAt, ...)
+6. Environment Variables & Secret Management
+Store in .env:
+
+JWT_SECRET
+DB_URL
+HOSTAI_WEBHOOK_SECRET
+SUITEOP_WEBHOOK_SECRET
+OPENAI_API_KEY
+(any other integration secrets)
+Provide a .env.example as a template.
+
+7. Testing Approach
+Unit & integration tests: Jest (backend/tests) for logic, API endpoints (supertest)
+Frontend tests: Vitest for component/unit tests (E2E/Playwright tests optional – omit from scaffold if not requested)
+Add sample test for major endpoint and a basic React component.
+8. Scripts
+Under each package.json (backend & frontend), include:
+
+"scripts": {
+  "dev": "tsx backend/src/server.ts",
+  "build:client": "vite build",
+  "migrate": "prisma migrate dev --preview-feature",
+  "test": "jest"
+}
+9. Deployment Config
+.replit:
+
+run = "bash scripts/start-replit.sh"
+10. Agent Output Requirements
+Scaffold the full folder structure, boilerplate starter code, minimal working example per module and endpoint, sample Prisma schema, placeholder React UIs, .env.example, and Replit CI.
+Only include optional .github/workflows/ci.yml if asked.
+All generated code should be well-commented and documented.
+If any requirement is unclear or underspecified, ask for clarification before code generation.
+Begin scaffolding the application now.
