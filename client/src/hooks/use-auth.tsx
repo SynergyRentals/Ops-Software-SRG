@@ -31,8 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginData) => {
+  const loginMutation = useMutation<SelectUser | null, Error, LoginData>({
+    mutationFn: async (credentials) => {
       try {
         const res = await apiRequest("POST", "/api/login", credentials);
         // Check if there's actually a body to parse
@@ -41,9 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return await res.json();
         }
         return null; // No content to parse
-      } catch (error) {
-        // Rethrow the error for the onError handler
-        throw error;
+      } catch (error: any) {
+        console.error("Login failed:", error);
+        // Convert the error to a proper Error object
+        throw new Error(error?.message || "Login failed");
       }
     },
     onSuccess: (user: SelectUser | null) => {
@@ -70,8 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
+  const registerMutation = useMutation<SelectUser | null, Error, InsertUser>({
+    mutationFn: async (credentials) => {
       try {
         const res = await apiRequest("POST", "/api/register", credentials);
         // Check if there's actually a body to parse
@@ -80,9 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return await res.json();
         }
         return null; // No content to parse
-      } catch (error) {
-        // Rethrow the error for the onError handler
-        throw error;
+      } catch (error: any) {
+        console.error("Registration failed:", error);
+        // Convert the error to a proper Error object
+        throw new Error(error?.message || "Registration failed");
       }
     },
     onSuccess: (user: SelectUser | null) => {
@@ -108,14 +110,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const logoutMutation = useMutation({
+  const logoutMutation = useMutation<boolean, Error, void>({
     mutationFn: async () => {
       try {
         await apiRequest("POST", "/api/logout");
         return true;
-      } catch (error) {
-        // Rethrow the error for the onError handler
-        throw error;
+      } catch (error: any) {
+        console.error("Logout failed:", error);
+        // Convert the error to a proper Error object
+        throw new Error(error?.message || "Logout failed");
       }
     },
     onSuccess: () => {

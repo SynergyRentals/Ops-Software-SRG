@@ -3,11 +3,13 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage;
+    let errorData: any = {};
+    
     try {
       // Try to parse as JSON first
       const contentType = res.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        const errorData = await res.json();
+        errorData = await res.json();
         errorMessage = errorData.message || JSON.stringify(errorData);
       } else {
         // If not JSON, just get the text
@@ -15,9 +17,18 @@ async function throwIfResNotOk(res: Response) {
       }
     } catch (error) {
       // If parsing fails, fall back to status text
+      console.error("Failed to parse error response:", error);
       errorMessage = res.statusText;
     }
-    throw new Error(errorMessage || `Request failed with status ${res.status}`);
+    
+    // Create a custom error with the response status
+    const customError: any = new Error(errorMessage || `Request failed with status ${res.status}`);
+    customError.status = res.status;
+    customError.statusText = res.statusText;
+    customError.url = res.url;
+    customError.data = errorData;
+    
+    throw customError;
   }
 }
 
@@ -26,15 +37,20 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error("API request failed:", error);
+    throw error; // Re-throw so mutation error handlers can catch it
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
