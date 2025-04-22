@@ -72,7 +72,16 @@ export default function AuthPage() {
   });
 
   const onLogin = async (values: z.infer<typeof loginSchema>) => {
-    await loginMutation.mutateAsync(values);
+    console.log('Submitting login form with values:', {
+      username: values.username,
+      passwordLength: values.password.length
+    });
+    try {
+      await loginMutation.mutateAsync(values);
+    } catch (error) {
+      console.error('Login error in form submission:', error);
+      // Error is already handled by the mutation
+    }
   };
 
   const onRegister = async (values: z.infer<typeof registerSchema>) => {
