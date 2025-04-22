@@ -143,9 +143,9 @@ export function PropertyTable({ data }: PropertyTableProps) {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate(`/properties?action=edit&id=${property.id}`);
+                onClick={() => {
+                  const url = `/properties?action=edit&id=${property.id}`;
+                  navigate(url);
                 }}
               >
                 <Edit className="mr-2 h-4 w-4" />

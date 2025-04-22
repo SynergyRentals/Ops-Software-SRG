@@ -29,11 +29,13 @@ export default function Properties() {
       setEditPropertyId(null);
     } else if (action === 'import') {
       setActiveTab('import');
-    } else if (id) {
-      setEditPropertyId(parseInt(id));
+    } else if (action === 'edit' && id) {
+      const propertyId = parseInt(id);
+      setEditPropertyId(propertyId);
       setActiveTab('edit');
     } else {
       setActiveTab('list');
+      setEditPropertyId(null);
     }
   }, [location]);
 
