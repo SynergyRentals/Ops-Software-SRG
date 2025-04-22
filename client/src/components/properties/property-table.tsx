@@ -143,7 +143,7 @@ export function PropertyTable({ data }: PropertyTableProps) {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => navigate(`/properties/${property.id}`)}
+                onClick={() => navigate(`/properties?id=${property.id}`)}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Property
