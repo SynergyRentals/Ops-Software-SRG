@@ -1,16 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useProperties } from "@/hooks/use-properties";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, addDays, startOfWeek, isToday, isSameDay } from "date-fns";
 import { Property, MaintenanceTask } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import "./property-week-view.css";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePropertyCalendarEvents, CalendarEvent } from "@/hooks/use-property-calendar";
 
 interface EventCard {
   id: string;
@@ -23,6 +24,7 @@ interface EventCard {
   status: string;
   dueTime?: string;
   priority?: string;
+  type?: 'task' | 'reservation';
 }
 
 interface PropertyWeekViewProps {
@@ -41,9 +43,10 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
       return response.json();
     }
   });
-  const [events, setEvents] = useState<EventCard[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<Record<number, CalendarEvent[]>>({});
   const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(false);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(defaultDate, { weekStartsOn: 1 }));
+  const queryClient = useQueryClient();
 
   // Generate days of the week for the header
   const weekDays = useMemo(() => {
@@ -69,13 +72,66 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
     setCurrentWeekStart(prevDate => addDays(prevDate, 7));
   };
 
-  // Combine maintenance tasks with calendar events
+  // Effect to fetch iCal events for all properties
+  useEffect(() => {
+    const fetchCalendarEvents = async () => {
+      if (!properties || properties.length === 0) return;
+      
+      setIsLoadingEvents(true);
+      const eventsMap: Record<number, CalendarEvent[]> = {};
+      
+      try {
+        for (const property of properties) {
+          if (property.icalUrl) {
+            try {
+              console.log(`Fetching iCal events for property ${property.id}: ${property.nickname}`);
+              const response = await apiRequest('GET', `/api/property/${property.id}/ical-events`);
+              
+              if (response.ok) {
+                const events = await response.json();
+                const parsedEvents = events.map((event: any) => ({
+                  ...event,
+                  start: new Date(event.start),
+                  end: new Date(event.end),
+                  type: 'reservation'
+                }));
+                eventsMap[property.id] = parsedEvents;
+              } else {
+                console.error(`Failed to fetch iCal events for property ${property.id}`);
+                eventsMap[property.id] = [];
+              }
+            } catch (error) {
+              console.error(`Error fetching iCal events for property ${property.id}:`, error);
+              eventsMap[property.id] = [];
+            }
+          } else {
+            eventsMap[property.id] = [];
+          }
+        }
+        
+        setCalendarEvents(eventsMap);
+      } catch (error) {
+        console.error('Error fetching calendar events:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch property reservations',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+    
+    fetchCalendarEvents();
+  }, [properties]);
+
+  // Combine maintenance tasks with calendar events from iCal
   const allEvents = useMemo(() => {
     if (!maintenanceTasks) return [];
     
     // Convert maintenance tasks to event cards
-    return maintenanceTasks.map((task: MaintenanceTask) => ({
-      id: task.id.toString(),
+    const taskEvents = maintenanceTasks.map((task: MaintenanceTask) => ({
+      id: `task-${task.id}`,
       title: task.title,
       description: task.description,
       start: new Date(task.createdAt || Date.now()),
@@ -86,9 +142,29 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
               task.status === 'in_progress' ? 'in-progress' : 'open',
       dueTime: task.dueDate ? format(new Date(task.dueDate), 'h:mm a') : undefined,
       priority: task.urgency === 'high' ? 'high' : 
-               task.urgency === 'medium' ? 'medium' : 'low'
+               task.urgency === 'medium' ? 'medium' : 'low',
+      type: 'task' as const
     }));
-  }, [maintenanceTasks]);
+    
+    // Convert iCal reservations to event cards
+    const calendarEventsList: EventCard[] = [];
+    Object.entries(calendarEvents).forEach(([propertyId, events]) => {
+      events.forEach(event => {
+        calendarEventsList.push({
+          id: `reservation-${event.id}`,
+          title: event.title,
+          description: event.description,
+          start: event.start,
+          end: event.end,
+          propertyId: parseInt(propertyId),
+          status: 'reserved',
+          type: 'reservation'
+        });
+      });
+    });
+    
+    return [...taskEvents, ...calendarEventsList];
+  }, [maintenanceTasks, calendarEvents]);
 
   // Filter events for a specific property and day
   const getEventsForPropertyAndDay = (propertyId: number, date: Date) => {
@@ -98,9 +174,14 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
     ));
   };
 
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch(status) {
+  // Get event color based on type and status
+  const getEventColor = (event: EventCard) => {
+    if (event.type === 'reservation') {
+      return 'bg-red-200 text-red-800 border border-red-300';
+    }
+
+    // For task events
+    switch(event.status) {
       case 'done':
         return 'bg-green-500';
       case 'in-progress':
@@ -113,8 +194,13 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
   };
 
   // Get status icon
-  const getStatusIcon = (status: string) => {
-    switch(status) {
+  const getStatusIcon = (event: EventCard) => {
+    if (event.type === 'reservation') {
+      return <Home className="h-4 w-4" />;
+    }
+
+    // For task events
+    switch(event.status) {
       case 'done':
         return <Check className="h-4 w-4" />;
       case 'in-progress':
