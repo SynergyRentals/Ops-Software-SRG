@@ -40,8 +40,8 @@ const formSchema = z.object({
   type: z.string().min(1, "Property type is required"),
   address: z.string().min(1, "Address is required"),
   icalUrl: z.string().nullable().optional(),
-  tags: z.string().optional().transform((val) => 
-    val ? val.split(',').map(tag => tag.trim()) : []
+  tags: z.string().transform((val) => 
+    val ? val.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : []
   ),
   beds: z.number().nullable().optional(),
   baths: z.number().nullable().optional(),
@@ -113,15 +113,27 @@ export function EditPropertyDialog({
 
   const onSubmit = async (values: PropertyFormValues) => {
     try {
+      console.log("Submitting updated property values:", values);
+      
+      // Prepare property data for update
+      const propertyData = {
+        ...values,
+        // Keep original values for fields that don't exist in the form
+        id: property.id
+      };
+      
       await updateProperty.mutateAsync({
         id: property.id,
-        property: values,
+        property: propertyData,
       });
+      
+      console.log("Property successfully updated");
       
       if (onSuccess) {
         onSuccess();
       }
       
+      // Close the dialog after successful update
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating property:", error);

@@ -57,19 +57,28 @@ export function useUpdateProperty() {
       id: number;
       property: Partial<InsertProperty>;
     }) => {
+      console.log("Making PATCH request to /api/property/" + id, property);
       const res = await apiRequest("PATCH", `/api/property/${id}`, property);
-      return await res.json();
+      const updatedProperty = await res.json();
+      console.log("Update response:", updatedProperty);
+      return updatedProperty;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
+      console.log("Property update successful:", data);
+      
+      // Invalidate all queries that might be affected by this update
       queryClient.invalidateQueries({ queryKey: ["/api/property"] });
       queryClient.invalidateQueries({ queryKey: [`/api/property/${variables.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/overview"] });
+      
+      // Show success message
       toast({
         title: "Property updated",
         description: "Property has been updated successfully.",
       });
     },
     onError: (error: Error) => {
+      console.error("Property update error:", error);
       toast({
         title: "Error updating property",
         description: error.message,
