@@ -33,8 +33,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation<SelectUser | null, Error, LoginData>({
     mutationFn: async (credentials) => {
+      console.log("Login attempt with:", credentials.username);
       try {
         const res = await apiRequest("POST", "/api/login", credentials);
+        
+        if (!res.ok) {
+          let errorMsg = "Authentication failed";
+          try {
+            const errorData = await res.json();
+            errorMsg = errorData.message || errorMsg;
+          } catch (e) {
+            // If we can't parse JSON, use status text
+            errorMsg = res.statusText || errorMsg;
+          }
+          throw new Error(errorMsg);
+        }
         
         // If successful, check for JSON content
         const contentType = res.headers.get('content-type');

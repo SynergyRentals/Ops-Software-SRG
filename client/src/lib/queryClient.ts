@@ -38,6 +38,9 @@ export async function apiRequest(
   url: string,
   data?: any
 ) {
+  // Ensure the URL starts with a slash for relative URLs
+  const requestUrl = url.startsWith('/') ? url : `/${url}`;
+
   const options: RequestInit = {
     method,
     headers: {
@@ -51,7 +54,8 @@ export async function apiRequest(
   }
 
   try {
-    const res = await fetch(url, options);
+    console.log(`Making ${method} request to ${requestUrl}`);
+    const res = await fetch(requestUrl, options);
 
     // Log detailed error information for debugging
     if (!res.ok) {
@@ -83,7 +87,12 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Ensure the URL starts with a slash for relative URLs
+    const url = queryKey[0] as string;
+    const requestUrl = url.startsWith('/') ? url : `/${url}`;
+    
+    console.log(`Query request to: ${requestUrl}`);
+    const res = await fetch(requestUrl, {
       credentials: "include",
     });
 
