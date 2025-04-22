@@ -1,3 +1,4 @@
+
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
@@ -33,27 +34,43 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
-  path: string,
-  body?: any
-): Promise<Response> {
-  const url = path.startsWith("http") ? path : path;
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
-
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+  url: string,
+  data?: any
+) {
   const options: RequestInit = {
     method,
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+    },
     credentials: "include",
   };
 
-  if (body) {
-    options.body = JSON.stringify(body);
+  if (data) {
+    options.body = JSON.stringify(data);
   }
 
   try {
-    return await fetch(url, options);
+    const res = await fetch(url, options);
+
+    // Log detailed error information for debugging
+    if (!res.ok) {
+      let errorData;
+      try {
+        errorData = await res.clone().json();
+      } catch (e) {
+        errorData = { message: "Could not parse error response" };
+      }
+
+      console.error("API request failed:", {
+        status: res.status,
+        statusText: res.statusText,
+        url: res.url,
+        data: errorData
+      });
+    }
+
+    return res;
   } catch (error) {
     console.error("API request error:", error);
     throw error;
