@@ -18,8 +18,8 @@ async function login() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username: 'admin',
-        password: 'password'
+        username: 'propadmin',
+        password: 'password123'
       }),
       credentials: 'include'
     });
