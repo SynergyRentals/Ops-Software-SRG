@@ -6,7 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 export function useProperties() {
   return useQuery<Property[], Error>({
     queryKey: ["/api/property"],
-    queryFn: getQueryFn => getQueryFn,
     select: (data) => {
       // Ensure we always return an array even if the API returns null or undefined
       return Array.isArray(data) ? data : [];
@@ -17,7 +16,6 @@ export function useProperties() {
 export function useProperty(id: number) {
   return useQuery<Property, Error>({
     queryKey: [`/api/property/${id}`],
-    queryFn: getQueryFn => getQueryFn,
     enabled: !!id,
   });
 }

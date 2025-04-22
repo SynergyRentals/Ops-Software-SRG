@@ -8,7 +8,6 @@ export function useInventoryItems(propertyId?: number) {
   
   return useQuery<InventoryItem[], Error>({
     queryKey: [`/api/inventory${queryParams}`],
-    queryFn: getQueryFn => getQueryFn,
     select: (data) => {
       // Ensure we always return an array even if the API returns null or undefined
       return Array.isArray(data) ? data : [];
@@ -19,7 +18,6 @@ export function useInventoryItems(propertyId?: number) {
 export function useInventoryItem(id: number) {
   return useQuery<InventoryItem, Error>({
     queryKey: [`/api/inventory/${id}`],
-    queryFn: getQueryFn => getQueryFn,
     enabled: !!id,
   });
 }
@@ -27,7 +25,6 @@ export function useInventoryItem(id: number) {
 export function useLowStockItems() {
   return useQuery<InventoryItem[], Error>({
     queryKey: ["/api/inventory/alerts/low-stock"],
-    queryFn: getQueryFn => getQueryFn,
     select: (data) => {
       // Ensure we always return an array even if the API returns null or undefined
       return Array.isArray(data) ? data : [];
