@@ -28,9 +28,9 @@ export function InventoryOverview() {
     return <InventoryOverviewSkeleton />;
   }
 
-  const criticalItems = lowStockItems?.filter(
-    item => item.currentStock < item.threshold / 2
-  ) || [];
+  const criticalItems = lowStockItems && Array.isArray(lowStockItems)
+    ? lowStockItems.filter(item => item.currentStock < item.threshold / 2)
+    : [];
 
   return (
     <Card>

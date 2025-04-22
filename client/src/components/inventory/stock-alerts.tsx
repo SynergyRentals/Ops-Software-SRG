@@ -20,13 +20,13 @@ export function StockAlerts() {
     return <StockAlertsSkeleton />;
   }
 
-  const criticalItems = lowStockItems?.filter(
-    item => item.currentStock < item.threshold / 2
-  ) || [];
+  const criticalItems = lowStockItems && Array.isArray(lowStockItems)
+    ? lowStockItems.filter(item => item.currentStock < item.threshold / 2)
+    : [];
 
-  const lowItems = lowStockItems?.filter(
-    item => item.currentStock >= item.threshold / 2 && item.currentStock < item.threshold
-  ) || [];
+  const lowItems = lowStockItems && Array.isArray(lowStockItems)
+    ? lowStockItems.filter(item => item.currentStock >= item.threshold / 2 && item.currentStock < item.threshold)
+    : [];
 
   if (!lowStockItems?.length) {
     return (
