@@ -143,7 +143,10 @@ export function PropertyTable({ data }: PropertyTableProps) {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => navigate(`/properties?action=edit&id=${property.id}`)}
+                onClick={() => {
+                  navigate(`/properties?action=edit&id=${property.id}`);
+                  table.setPageIndex(0); // Reset to first page after navigation
+                }}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Property
