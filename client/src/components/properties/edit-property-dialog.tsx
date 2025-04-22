@@ -35,10 +35,10 @@ import { useUpdateProperty } from "@/hooks/use-properties";
 
 // Define an explicit schema for the form that matches what we need
 const formSchema = z.object({
-  nickname: z.string(),
-  title: z.string(),
-  type: z.string(),
-  address: z.string(),
+  nickname: z.string().min(1, "Nickname is required"),
+  title: z.string().min(1, "Title is required"),
+  type: z.string().min(1, "Property type is required"),
+  address: z.string().min(1, "Address is required"),
   icalUrl: z.string().nullable().optional(),
   tags: z.string().optional().transform((val) => 
     val ? val.split(',').map(tag => tag.trim()) : []

@@ -22,6 +22,10 @@ import { EditPropertyDialog } from "../properties/edit-property-dialog";
 export function PropertyList() {
   const [_, navigate] = useLocation();
   const { data: properties, isLoading } = useProperties();
+  
+  // State for property editing dialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [propertyToEdit, setPropertyToEdit] = useState<Property | null>(null);
 
   const handleCreateProperty = () => {
     navigate("/properties?action=create");
@@ -127,16 +131,9 @@ export function PropertyList() {
                         size="sm"
                         onClick={() => {
                           console.log("Dashboard Edit button clicked for property:", property.id);
-                          // Force navigation with state refresh to ensure proper URL parameter handling
-                          const url = `/properties?action=edit&id=${property.id}`;
-                          
-                          // Navigate using both methods to ensure it works
-                          navigate(url, { replace: true });
-                          
-                          // Fallback to direct location change after a short delay
-                          setTimeout(() => {
-                            window.location.href = url;
-                          }, 100);
+                          // Open the edit dialog instead of navigating
+                          setPropertyToEdit(property);
+                          setIsEditDialogOpen(true);
                         }}
                       >
                         <Edit className="mr-2 h-4 w-4" />
@@ -166,6 +163,19 @@ export function PropertyList() {
           </Button>
         </div>
       </div>
+      
+      {/* Edit Property Dialog */}
+      {propertyToEdit && (
+        <EditPropertyDialog
+          property={propertyToEdit}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSuccess={() => {
+            // Refresh the properties list after updating
+            setIsEditDialogOpen(false);
+          }}
+        />
+      )}
     </Card>
   );
 }
