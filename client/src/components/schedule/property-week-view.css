@@ -103,8 +103,25 @@
 
 /* Reservation styling */
 .event-card.bg-red-200 {
-  border-left: 4px solid #f87171;
   background-color: rgba(254, 226, 226, 0.6);
+}
+
+/* Multi-day reservation styling */
+.event-card.border-l-red-500 {
+  border-left-width: 4px;
+}
+
+.event-card.border-r-red-500 {
+  border-right-width: 4px;
+}
+
+/* Connected multi-day reservation styling */
+.event-card.rounded-l-md {
+  margin-right: -1px;
+}
+
+.event-card.rounded-r-md {
+  margin-left: -1px;
 }
 
 .event-card.bg-green-500 {

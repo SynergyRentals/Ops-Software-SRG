@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format, addDays, startOfWeek, isToday, isSameDay } from "date-fns";
 import { Property, MaintenanceTask } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar } from "lucide-react";
+import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar, CalendarRange } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -168,16 +168,64 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
 
   // Filter events for a specific property and day
   const getEventsForPropertyAndDay = (propertyId: number, date: Date) => {
-    return allEvents.filter((event: EventCard) => (
-      event.propertyId === propertyId && 
-      isSameDay(event.start, date)
-    ));
+    return allEvents.filter((event: EventCard) => {
+      // For reservations, check if the date falls between start and end
+      if (event.type === 'reservation') {
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        const currentDate = new Date(date);
+        
+        // Reset times to compare just dates
+        eventStart.setHours(0, 0, 0, 0);
+        eventEnd.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        
+        return (
+          event.propertyId === propertyId && 
+          currentDate >= eventStart && 
+          currentDate <= eventEnd
+        );
+      } 
+      
+      // For tasks, just check if it's the same day as the start date
+      return (
+        event.propertyId === propertyId && 
+        isSameDay(event.start, date)
+      );
+    });
   };
 
   // Get event color based on type and status
-  const getEventColor = (event: EventCard) => {
+  const getEventColor = (event: EventCard, date: Date) => {
     if (event.type === 'reservation') {
-      return 'bg-red-200 text-red-800 border border-red-300';
+      // Base style for reservations
+      let classes = 'bg-red-200 text-red-800 border-y border-red-300';
+      
+      const eventStart = new Date(event.start);
+      const eventEnd = new Date(event.end);
+      const currentDate = new Date(date);
+      
+      // Reset times to compare just dates
+      eventStart.setHours(0, 0, 0, 0);
+      eventEnd.setHours(0, 0, 0, 0);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      // First day of reservation
+      if (currentDate.getTime() === eventStart.getTime()) {
+        classes += ' border-l border-l-red-500 rounded-l-md';
+      }
+      
+      // Last day of reservation
+      if (currentDate.getTime() === eventEnd.getTime()) {
+        classes += ' border-r border-r-red-500 rounded-r-md';
+      }
+      
+      // If it's a single day reservation, add both left and right borders
+      if (eventStart.getTime() === eventEnd.getTime()) {
+        classes = 'bg-red-200 text-red-800 border border-red-300 rounded-md';
+      }
+      
+      return classes;
     }
 
     // For task events
@@ -312,7 +360,7 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
                             {dayEvents.map((event: EventCard) => (
                               <div 
                                 key={event.id} 
-                                className={`event-card ${getEventColor(event)}`}
+                                className={`event-card ${getEventColor(event, day.date)}`}
                               >
                                 <div className="event-header">
                                   <span className="event-status">
@@ -326,10 +374,16 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
                                 <h4 className="event-title">{event.title}</h4>
                                 <div className="event-details">
                                   {event.type === 'reservation' ? (
-                                    <div className="flex items-center text-xs">
-                                      <Calendar className="h-3 w-3 mr-1" />
-                                      <span>Reservation</span>
-                                    </div>
+                                    <>
+                                      <div className="flex items-center text-xs">
+                                        <Calendar className="h-3 w-3 mr-1" />
+                                        <span>Reservation</span>
+                                      </div>
+                                      <div className="flex items-center text-xs">
+                                        <CalendarRange className="h-3 w-3 mr-1" />
+                                        <span>{format(new Date(event.start), 'MMM d')} - {format(new Date(event.end), 'MMM d')}</span>
+                                      </div>
+                                    </>
                                   ) : (
                                     <>
                                       <div className="flex items-center text-xs">
