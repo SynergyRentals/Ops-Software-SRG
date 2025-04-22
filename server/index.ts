@@ -67,4 +67,23 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received. Shutting down gracefully...');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1); // Exit with a non-zero code to indicate an error
+  });
+
+  process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+    process.exit(1); // Exit with a non-zero code to indicate an error
+  });
 })();
