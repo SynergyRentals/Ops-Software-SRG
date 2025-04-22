@@ -12,7 +12,9 @@ declare global {
   }
 }
 
-export function setupAuth(app: Express) {
+export async function setupAuth(app: Express) {
+  // Seed initial data if needed
+  await (storage as any).seedInitialData?.();
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "str-maintenance-inventory-secret",
     resave: false,

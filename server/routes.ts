@@ -14,7 +14,7 @@ import * as dashboardController from "./controllers/dashboardController";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
-  setupAuth(app);
+  await setupAuth(app);
   
   // User routes
   app.get("/api/users", isAuthenticated, hasRole(["admin"]), async (req, res) => {

@@ -24,8 +24,12 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db, pool } from "./db";
+import { eq, and, lt, asc, desc, isNull, inArray } from "drizzle-orm";
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User Methods
@@ -557,4 +561,490 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  sessionStore: any; // Will fix typing issue
+
+  constructor() {
+    // Initialize session store with PostgreSQL
+    import('connect-pg-simple').then(connectPgModule => {
+      const connectPg = connectPgModule.default;
+      import('express-session').then(sessionModule => {
+        const session = sessionModule.default;
+        const PostgresStore = connectPg(session);
+        
+        this.sessionStore = new PostgresStore({
+          pool: pool,
+          createTableIfMissing: true
+        });
+      });
+    });
+    
+    // Initialize with a temporary memory store while imports are loading
+    const MemoryStore = new Map();
+    this.sessionStore = {
+      get: (sid, cb) => cb(null, MemoryStore.get(sid)),
+      set: (sid, sess, cb) => { MemoryStore.set(sid, sess); cb(); },
+      destroy: (sid, cb) => { MemoryStore.delete(sid); cb(); }
+    };
+  }
+
+  // User Methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return updatedUser || undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return !!result;
+  }
+
+  // Property Methods
+  async getProperty(id: number): Promise<Property | undefined> {
+    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    return property || undefined;
+  }
+
+  async getProperties(): Promise<Property[]> {
+    return await db.select().from(properties);
+  }
+
+  async createProperty(insertProperty: InsertProperty): Promise<Property> {
+    const [property] = await db.insert(properties).values(insertProperty).returning();
+    return property;
+  }
+
+  async updateProperty(id: number, propertyData: Partial<InsertProperty>): Promise<Property | undefined> {
+    const [property] = await db
+      .update(properties)
+      .set({
+        ...propertyData,
+        updatedAt: new Date(),
+      })
+      .where(eq(properties.id, id))
+      .returning();
+    
+    return property || undefined;
+  }
+
+  async deleteProperty(id: number): Promise<boolean> {
+    const result = await db.delete(properties).where(eq(properties.id, id));
+    return !!result;
+  }
+
+  async importPropertiesFromCsv(propertiesData: PropertyCsvData[]): Promise<Property[]> {
+    const importedProperties: Property[] = [];
+    
+    for (const data of propertiesData) {
+      const tagsArray = data.tags ? data.tags.split(',').map(tag => tag.trim()) : [];
+      
+      const property = await this.createProperty({
+        nickname: data.nickname,
+        title: data.title,
+        type: data.type,
+        address: data.address,
+        icalUrl: data.icalUrl || null,
+        tags: tagsArray,
+        beds: data.beds || null,
+        baths: data.baths || null,
+        imageUrl: null
+      });
+      
+      importedProperties.push(property);
+    }
+    
+    return importedProperties;
+  }
+
+  // Maintenance Methods
+  async getMaintenanceTask(id: number): Promise<MaintenanceTask | undefined> {
+    const [task] = await db
+      .select()
+      .from(maintenanceTasks)
+      .where(eq(maintenanceTasks.id, id));
+    
+    return task || undefined;
+  }
+
+  async getMaintenanceTasks(filters?: { propertyId?: number, status?: string, urgency?: string }): Promise<MaintenanceTask[]> {
+    let query = db.select().from(maintenanceTasks);
+    
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.propertyId) {
+        conditions.push(eq(maintenanceTasks.propertyId, filters.propertyId));
+      }
+      
+      if (filters.status) {
+        conditions.push(eq(maintenanceTasks.status, filters.status as any));
+      }
+      
+      if (filters.urgency) {
+        conditions.push(eq(maintenanceTasks.urgency, filters.urgency as any));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    return await query;
+  }
+
+  async createMaintenanceTask(insertTask: InsertMaintenanceTask): Promise<MaintenanceTask> {
+    const [task] = await db
+      .insert(maintenanceTasks)
+      .values(insertTask)
+      .returning();
+    
+    return task;
+  }
+
+  async updateMaintenanceTask(id: number, taskData: Partial<InsertMaintenanceTask>): Promise<MaintenanceTask | undefined> {
+    const [task] = await db
+      .update(maintenanceTasks)
+      .set({
+        ...taskData,
+        updatedAt: new Date(),
+      })
+      .where(eq(maintenanceTasks.id, id))
+      .returning();
+    
+    return task || undefined;
+  }
+
+  async deleteMaintenanceTask(id: number): Promise<boolean> {
+    const result = await db.delete(maintenanceTasks).where(eq(maintenanceTasks.id, id));
+    return !!result;
+  }
+
+  // Inventory Methods
+  async getInventoryItem(id: number): Promise<InventoryItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(inventoryItems)
+      .where(eq(inventoryItems.id, id));
+    
+    return item || undefined;
+  }
+
+  async getInventoryItems(propertyId?: number): Promise<InventoryItem[]> {
+    let query = db.select().from(inventoryItems);
+    
+    if (propertyId) {
+      query = query.where(eq(inventoryItems.propertyId, propertyId));
+    }
+    
+    return await query;
+  }
+
+  async createInventoryItem(insertItem: InsertInventoryItem): Promise<InventoryItem> {
+    const [item] = await db
+      .insert(inventoryItems)
+      .values(insertItem)
+      .returning();
+    
+    return item;
+  }
+
+  async updateInventoryItem(id: number, itemData: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined> {
+    const [item] = await db
+      .update(inventoryItems)
+      .set({
+        ...itemData,
+        updatedAt: new Date(),
+      })
+      .where(eq(inventoryItems.id, id))
+      .returning();
+    
+    return item || undefined;
+  }
+
+  async deleteInventoryItem(id: number): Promise<boolean> {
+    const result = await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+    return !!result;
+  }
+
+  async getLowStockItems(): Promise<InventoryItem[]> {
+    return await db
+      .select()
+      .from(inventoryItems)
+      .where(lt(inventoryItems.currentStock, inventoryItems.threshold));
+  }
+
+  // Supply Request Methods
+  async getSupplyRequest(id: number): Promise<SupplyRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(supplyRequests)
+      .where(eq(supplyRequests.id, id));
+    
+    return request || undefined;
+  }
+
+  async getSupplyRequests(propertyId?: number): Promise<SupplyRequest[]> {
+    let query = db.select().from(supplyRequests);
+    
+    if (propertyId) {
+      query = query.where(eq(supplyRequests.propertyId, propertyId));
+    }
+    
+    return await query;
+  }
+
+  async createSupplyRequest(insertRequest: InsertSupplyRequest, items: InsertSupplyRequestItem[]): Promise<SupplyRequest> {
+    // Use a transaction to ensure both the request and items are saved
+    return await db.transaction(async (tx) => {
+      const [request] = await tx
+        .insert(supplyRequests)
+        .values(insertRequest)
+        .returning();
+      
+      // Add requestId to items
+      const itemsWithRequestId = items.map(item => ({
+        ...item,
+        requestId: request.id
+      }));
+      
+      // Insert items
+      await tx
+        .insert(supplyRequestItems)
+        .values(itemsWithRequestId);
+      
+      return request;
+    });
+  }
+
+  async updateSupplyRequest(id: number, requestData: Partial<InsertSupplyRequest>): Promise<SupplyRequest | undefined> {
+    const [request] = await db
+      .update(supplyRequests)
+      .set({
+        ...requestData,
+        updatedAt: new Date(),
+      })
+      .where(eq(supplyRequests.id, id))
+      .returning();
+    
+    return request || undefined;
+  }
+
+  async deleteSupplyRequest(id: number): Promise<boolean> {
+    // Use a transaction to delete both the request and its items
+    return await db.transaction(async (tx) => {
+      await tx
+        .delete(supplyRequestItems)
+        .where(eq(supplyRequestItems.requestId, id));
+      
+      const result = await tx
+        .delete(supplyRequests)
+        .where(eq(supplyRequests.id, id));
+      
+      return !!result;
+    });
+  }
+
+  // Webhook Methods
+  async createWebhookEvent(insertEvent: InsertWebhookEvent): Promise<WebhookEvent> {
+    const [event] = await db
+      .insert(webhookEvents)
+      .values(insertEvent)
+      .returning();
+    
+    return event;
+  }
+
+  async getWebhookEvents(processed?: boolean): Promise<WebhookEvent[]> {
+    let query = db.select().from(webhookEvents);
+    
+    if (processed !== undefined) {
+      query = query.where(eq(webhookEvents.processed, processed));
+    }
+    
+    return await query;
+  }
+
+  async updateWebhookEvent(id: number, eventData: Partial<InsertWebhookEvent>): Promise<WebhookEvent | undefined> {
+    const [event] = await db
+      .update(webhookEvents)
+      .set(eventData)
+      .where(eq(webhookEvents.id, id))
+      .returning();
+    
+    return event || undefined;
+  }
+
+  // Dashboard Methods
+  async getDashboardStats(): Promise<{ propertiesCount: number; pendingTasks: number; completedTasks: number; inventoryAlerts: number; }> {
+    // Use raw queries for counting
+    const { rows: [propertiesResult] } = await pool.query('SELECT COUNT(*) as count FROM properties');
+    const propertiesCount = Number(propertiesResult?.count || 0);
+    
+    const { rows: [pendingTasksResult] } = await pool.query('SELECT COUNT(*) as count FROM maintenance_tasks WHERE status = $1', ['pending']);
+    const pendingTasks = Number(pendingTasksResult?.count || 0);
+    
+    const { rows: [completedTasksResult] } = await pool.query('SELECT COUNT(*) as count FROM maintenance_tasks WHERE status = $1', ['completed']);
+    const completedTasks = Number(completedTasksResult?.count || 0);
+    
+    const { rows: [inventoryAlertsResult] } = await pool.query('SELECT COUNT(*) as count FROM inventory_items WHERE current_stock < threshold');
+    const inventoryAlerts = Number(inventoryAlertsResult?.count || 0);
+    
+    return {
+      propertiesCount,
+      pendingTasks,
+      completedTasks,
+      inventoryAlerts
+    };
+  }
+
+  // Seed the database with initial data if it's empty
+  async seedInitialData() {
+    // Check if we have any users
+    const { rows } = await pool.query('SELECT COUNT(*) as count FROM users');
+    const userCount = Number(rows[0]?.count || 0);
+    
+    if (userCount === 0) {
+      // Create admin user
+      await this.createUser({
+        username: "admin",
+        password: "$2b$10$xRtXMKGIp/55YQVQPv5zSOdalBr5TB1WpP9gV/MCnpYZC4rYGYMN2", // "password"
+        email: "admin@example.com",
+        role: "admin",
+        name: "Administrator"
+      });
+      
+      // Create sample properties
+      const property1 = await this.createProperty({
+        nickname: "Oceanview Villa",
+        title: "Luxury Beachfront Villa",
+        type: "Beach House",
+        address: "123 Oceanfront Dr, Malibu, CA 90265",
+        icalUrl: "https://example.com/calendar/oceanview.ics",
+        tags: ["luxury", "beach", "family"],
+        beds: 3,
+        baths: 2,
+        imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+      });
+      
+      const property2 = await this.createProperty({
+        nickname: "Mountain Retreat",
+        title: "Cozy Mountain Cabin",
+        type: "Cabin",
+        address: "456 Pine Trail, Lake Tahoe, CA 96150",
+        icalUrl: "https://example.com/calendar/mountain.ics",
+        tags: ["mountains", "cozy", "nature"],
+        beds: 2,
+        baths: 1,
+        imageUrl: "https://images.unsplash.com/photo-1501685532562-aa6846b14a0e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+      });
+      
+      const property3 = await this.createProperty({
+        nickname: "City Loft",
+        title: "Modern Downtown Loft",
+        type: "Apartment",
+        address: "789 Market St #500, San Francisco, CA 94103",
+        icalUrl: "https://example.com/calendar/cityloft.ics",
+        tags: ["urban", "modern", "central"],
+        beds: 1,
+        baths: 1,
+        imageUrl: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+      });
+      
+      // Create some maintenance tasks
+      await this.createMaintenanceTask({
+        title: "HVAC Unit Failure",
+        description: "Air conditioning stopped working, needs immediate repair",
+        propertyId: property1.id,
+        urgency: "high",
+        status: "pending",
+        dueDate: new Date(),
+        source: "manual"
+      });
+      
+      await this.createMaintenanceTask({
+        title: "Light Fixtures Replacement",
+        description: "Replace living room light fixtures",
+        propertyId: property2.id,
+        urgency: "medium",
+        status: "pending",
+        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // tomorrow
+        source: "manual"
+      });
+      
+      await this.createMaintenanceTask({
+        title: "General Cleaning",
+        description: "Scheduled deep cleaning",
+        propertyId: property3.id,
+        urgency: "low",
+        status: "pending",
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // next week
+        source: "manual"
+      });
+      
+      // Create inventory items
+      await this.createInventoryItem({
+        name: "Toilet Paper",
+        sku: "TP001",
+        currentStock: 4,
+        threshold: 10,
+        category: "Bathroom"
+      });
+      
+      await this.createInventoryItem({
+        name: "Hand Soap",
+        sku: "HS001",
+        currentStock: 7,
+        threshold: 8,
+        category: "Bathroom"
+      });
+      
+      await this.createInventoryItem({
+        name: "Dish Soap",
+        sku: "DS001",
+        currentStock: 12,
+        threshold: 5,
+        category: "Kitchen"
+      });
+      
+      await this.createInventoryItem({
+        name: "Coffee Filters",
+        sku: "CF001",
+        currentStock: 3,
+        threshold: 6,
+        category: "Kitchen"
+      });
+    }
+  }
+}
+
+// Create and export an instance of DatabaseStorage
+export const storage = new DatabaseStorage();
