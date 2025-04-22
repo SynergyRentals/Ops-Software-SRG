@@ -1,6 +1,10 @@
-const fs = require('fs');
-const path = require('path');
-const fetch = require('node-fetch');
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Read the CSV file
 const csvData = fs.readFileSync(path.join(__dirname, 'formatted_properties.csv'), 'utf8');
