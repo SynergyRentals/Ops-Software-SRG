@@ -20,9 +20,11 @@ export default function Properties() {
 
   // Parse URL params to determine which tab to show
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.split('?')[1]);
+    const searchParams = new URLSearchParams(location.split('?')[1] || '');
     const action = searchParams.get('action');
     const id = searchParams.get('id');
+    
+    console.log("URL params:", { action, id, location });
     
     if (action === 'create') {
       setActiveTab('create');
@@ -31,6 +33,13 @@ export default function Properties() {
       setActiveTab('import');
     } else if (action === 'edit' && id) {
       const propertyId = parseInt(id);
+      console.log("Setting edit property ID:", propertyId);
+      setEditPropertyId(propertyId);
+      setActiveTab('edit');
+    } else if (id && !action) {
+      // Handle case where only ID is in URL (from dashboard)
+      const propertyId = parseInt(id);
+      console.log("Setting edit property ID from just id param:", propertyId);
       setEditPropertyId(propertyId);
       setActiveTab('edit');
     } else if (!action) {
