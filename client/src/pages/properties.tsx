@@ -33,7 +33,7 @@ export default function Properties() {
       const propertyId = parseInt(id);
       setEditPropertyId(propertyId);
       setActiveTab('edit');
-    } else {
+    } else if (!action) {
       setActiveTab('list');
       setEditPropertyId(null);
     }
