@@ -33,9 +33,10 @@ export default function Dashboard() {
   const { data: lowStockItems } = useLowStockItems();
   
   // Get most recent/urgent tasks
-  const pendingTasks = tasks
-    ?.filter(task => task.status === 'pending')
-    .sort((a, b) => {
+  const pendingTasks = tasks && Array.isArray(tasks)
+    ? tasks
+        .filter(task => task.status === 'pending')
+        .sort((a, b) => {
       // Sort by urgency first, then by due date
       const urgencyOrder = { high: 1, medium: 2, low: 3 };
       const aUrgency = urgencyOrder[a.urgency as keyof typeof urgencyOrder] || 99;
@@ -54,7 +55,8 @@ export default function Dashboard() {
       
       return 0;
     })
-    .slice(0, 3);
+    .slice(0, 3)
+    : [];
 
   return (
     <MainLayout title="Dashboard">
