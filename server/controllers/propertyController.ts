@@ -217,7 +217,7 @@ export async function syncPropertyIcal(req: Request, res: Response) {
       const icalData = await response.text();
       
       // Parse iCal data
-      const events = ical.sync.parseICS(icalData);
+      const events = ical.parseICS(icalData);
       
       // Mark property as updated
       await storage.updateProperty(propertyId, {
@@ -286,7 +286,7 @@ export async function getPropertyIcalEvents(req: Request, res: Response) {
       const icalData = await response.text();
       
       // Parse iCal data
-      const events = ical.sync.parseICS(icalData);
+      const events = ical.parseICS(icalData);
       
       // Format events for calendar display
       const formattedEvents = Object.values(events)
