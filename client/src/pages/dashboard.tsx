@@ -17,7 +17,7 @@ import { CreateTaskDialog } from "@/components/maintenance/create-task-dialog";
 export default function Dashboard() {
   const [_, navigate] = useLocation();
   const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
-  
+
   const { data: dashboardStats, isLoading: statsLoading } = useQuery<{
     propertiesCount: number;
     pendingTasks: number;
@@ -27,12 +27,12 @@ export default function Dashboard() {
     queryKey: ["/api/dashboard/overview"],
     queryFn: getQueryFn => getQueryFn,
   });
-  
+
   const { data: properties } = useProperties();
-  const { data: tasks } = useMaintenanceTasks();
-  const { data: lowStockItems } = useLowStockItems();
-  
-  // Get most recent/urgent tasks
+  const { data: tasks, isLoading: tasksLoading } = useMaintenanceTasks();
+  const { data: lowStockItems, isLoading: inventoryLoading } = useLowStockItems();
+
+  // Get most recent/urgent tasks - ensure tasks is an array before processing
   const pendingTasks = tasks && Array.isArray(tasks)
     ? tasks
         .filter(task => task.status === 'pending')
@@ -41,18 +41,18 @@ export default function Dashboard() {
       const urgencyOrder = { high: 1, medium: 2, low: 3 };
       const aUrgency = urgencyOrder[a.urgency as keyof typeof urgencyOrder] || 99;
       const bUrgency = urgencyOrder[b.urgency as keyof typeof urgencyOrder] || 99;
-      
+
       if (aUrgency !== bUrgency) return aUrgency - bUrgency;
-      
+
       // If same urgency, sort by due date
       if (a.dueDate && b.dueDate) {
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       }
-      
+
       // If no due date, put it at the end
       if (!a.dueDate) return 1;
       if (!b.dueDate) return -1;
-      
+
       return 0;
     })
     .slice(0, 3)
@@ -102,7 +102,7 @@ export default function Dashboard() {
               href="/properties"
               onClick={() => navigate("/properties")}
             />
-            
+
             <StatsCard 
               title="Pending Tasks" 
               value={dashboardStats?.pendingTasks ?? 0}
@@ -116,7 +116,7 @@ export default function Dashboard() {
               href="/maintenance"
               onClick={() => navigate("/maintenance")}
             />
-            
+
             <StatsCard 
               title="Inventory Alerts" 
               value={dashboardStats?.inventoryAlerts ?? 0}
@@ -129,7 +129,7 @@ export default function Dashboard() {
               href="/inventory"
               onClick={() => navigate("/inventory")}
             />
-            
+
             <StatsCard 
               title="Completed Tasks" 
               value={dashboardStats?.completedTasks ?? 0}
@@ -152,7 +152,7 @@ export default function Dashboard() {
         {/* Maintenance Tasks */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Recent Maintenance Tasks</h2>
-          
+
           {pendingTasks?.length ? (
             <div className="space-y-4">
               {pendingTasks.map(task => (
@@ -162,7 +162,7 @@ export default function Dashboard() {
                   onClick={() => navigate(`/maintenance?task=${task.id}`)}
                 />
               ))}
-              
+
               <div className="text-sm">
                 <Button 
                   variant="link" 

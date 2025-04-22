@@ -23,16 +23,16 @@ export function MaintenanceList({ onTaskClick }: MaintenanceListProps) {
   const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("grid");
-  
+
   const { data: tasks, isLoading } = useMaintenanceTasks();
 
   const filteredTasks = tasks?.filter(task => {
     // Status filter
     if (statusFilter !== "all" && task.status !== statusFilter) return false;
-    
+
     // Urgency filter
     if (urgencyFilter !== "all" && task.urgency !== urgencyFilter) return false;
-    
+
     // Search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -41,7 +41,7 @@ export function MaintenanceList({ onTaskClick }: MaintenanceListProps) {
         (task.description && task.description.toLowerCase().includes(query))
       );
     }
-    
+
     return true;
   });
 
@@ -76,7 +76,7 @@ export function MaintenanceList({ onTaskClick }: MaintenanceListProps) {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Select
             value={urgencyFilter}
             onValueChange={setUrgencyFilter}
@@ -99,7 +99,7 @@ export function MaintenanceList({ onTaskClick }: MaintenanceListProps) {
           <TabsTrigger value="grid">Grid</TabsTrigger>
           <TabsTrigger value="list">List</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="grid">
           {!filteredTasks?.length ? (
             <Card className="p-6 text-center text-muted-foreground">
@@ -117,7 +117,7 @@ export function MaintenanceList({ onTaskClick }: MaintenanceListProps) {
             </div>
           )}
         </TabsContent>
-        
+
         <TabsContent value="list">
           {!filteredTasks?.length ? (
             <Card className="p-6 text-center text-muted-foreground">
