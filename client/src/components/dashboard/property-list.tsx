@@ -122,7 +122,7 @@ export function PropertyList() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => navigate(`/properties?id=${property.id}`)}
+                        onClick={() => navigate(`/properties?action=edit&id=${property.id}`)}
                       >
                         Edit
                       </Button>
