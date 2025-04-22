@@ -22,8 +22,8 @@ export function Scheduler() {
 
   const isLoading = propertiesLoading || tasksLoading;
   
-  // Filter tasks for the selected date
-  const filteredTasks = tasks?.filter(task => {
+  // Filter tasks for the selected date, making sure tasks is an array before filtering
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
     if (!selectedDate || !task.dueDate) return false;
     
     const taskDate = new Date(task.dueDate);
@@ -32,25 +32,25 @@ export function Scheduler() {
       taskDate.getMonth() === selectedDate.getMonth() &&
       taskDate.getFullYear() === selectedDate.getFullYear()
     );
-  }) || [];
+  }) : [];
 
   // Get all dates with tasks for highlighting in the calendar
-  const datesWithTasks = tasks?.reduce((dates: Date[], task) => {
+  const datesWithTasks = Array.isArray(tasks) ? tasks.reduce((dates: Date[], task) => {
     if (task.dueDate) {
       const date = new Date(task.dueDate);
       dates.push(date);
     }
     return dates;
-  }, []) || [];
+  }, []) : [];
   
   // Group tasks by property for list view
-  const tasksByProperty = tasks?.reduce((grouped: Record<number, MaintenanceTask[]>, task) => {
+  const tasksByProperty = Array.isArray(tasks) ? tasks.reduce((grouped: Record<number, MaintenanceTask[]>, task) => {
     if (!grouped[task.propertyId]) {
       grouped[task.propertyId] = [];
     }
     grouped[task.propertyId].push(task);
     return grouped;
-  }, {}) || {};
+  }, {}) : {};
 
   return (
     <div className="space-y-6">

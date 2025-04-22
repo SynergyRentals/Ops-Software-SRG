@@ -18,6 +18,10 @@ export function useMaintenanceTasks(filters?: {
   return useQuery<MaintenanceTask[], Error>({
     queryKey: ["/api/maintenance", queryString],
     queryFn: getQueryFn => getQueryFn,
+    select: (data) => {
+      // Ensure we always return an array even if the API returns null or undefined
+      return Array.isArray(data) ? data : [];
+    }
   });
 }
 
