@@ -11,9 +11,9 @@ type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: any;
-  logoutMutation: any;
-  registerMutation: any;
+  loginMutation: ReturnType<typeof useMutation<SelectUser | null, Error, LoginData>>;
+  logoutMutation: ReturnType<typeof useMutation<boolean, Error, void>>;
+  registerMutation: ReturnType<typeof useMutation<SelectUser | null, Error, InsertUser>>;
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
@@ -46,17 +46,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${user.name || user.username}!`,
-      });
+    onSuccess: (user: SelectUser | null) => {
+      if (user) {
+        queryClient.setQueryData(["/api/user"], user);
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${user.name || user.username}!`,
+        });
+      } else {
+        // Handle edge case where server returns a success but no user
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+      }
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     },
@@ -77,17 +85,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created successfully!",
-      });
+    onSuccess: (user: SelectUser | null) => {
+      if (user) {
+        queryClient.setQueryData(["/api/user"], user);
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created successfully!",
+        });
+      } else {
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created, please login",
+        });
+      }
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     },
@@ -110,10 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been logged out of your account.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Logout failed",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     },
