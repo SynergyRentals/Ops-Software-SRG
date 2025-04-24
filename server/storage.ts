@@ -116,6 +116,8 @@ export class MemStorage implements IStorage {
   private supplyRequests: Map<number, SupplyRequest>;
   private supplyRequestItems: Map<number, SupplyRequestItem[]>;
   private webhookEvents: Map<number, WebhookEvent>;
+  private tasks: Map<number, Task>;
+  private taskAttachments: Map<number, TaskAttachment[]>;
   
   currentUserId: number;
   currentPropertyId: number;
@@ -123,6 +125,7 @@ export class MemStorage implements IStorage {
   currentItemId: number;
   currentRequestId: number;
   currentWebhookId: number;
+  currentTaskAttachmentId: number;
   sessionStore: session.SessionStore;
 
   constructor() {
@@ -133,6 +136,8 @@ export class MemStorage implements IStorage {
     this.supplyRequests = new Map();
     this.supplyRequestItems = new Map();
     this.webhookEvents = new Map();
+    this.tasks = new Map();
+    this.taskAttachments = new Map();
     
     this.currentUserId = 1;
     this.currentPropertyId = 1;
@@ -140,6 +145,7 @@ export class MemStorage implements IStorage {
     this.currentItemId = 1;
     this.currentRequestId = 1;
     this.currentWebhookId = 1;
+    this.currentTaskAttachmentId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
@@ -557,6 +563,117 @@ export class MemStorage implements IStorage {
     };
     this.webhookEvents.set(id, updatedEvent);
     return updatedEvent;
+  }
+  
+  // Task Methods
+  async getTask(id: number): Promise<Task | undefined> {
+    return this.tasks.get(id);
+  }
+  
+  async getTaskByExternalId(externalId: string): Promise<Task | undefined> {
+    return Array.from(this.tasks.values()).find(
+      task => task.externalId === externalId
+    );
+  }
+  
+  async getTasks(filters?: { status?: string, urgency?: string, teamTarget?: string }): Promise<Task[]> {
+    let tasks = Array.from(this.tasks.values());
+    
+    if (filters) {
+      if (filters.status) {
+        tasks = tasks.filter(task => task.status === filters.status);
+      }
+      
+      if (filters.urgency) {
+        tasks = tasks.filter(task => task.urgency === filters.urgency);
+      }
+      
+      if (filters.teamTarget) {
+        tasks = tasks.filter(task => task.teamTarget === filters.teamTarget);
+      }
+    }
+    
+    // Sort by createdAt descending (newest first)
+    return tasks.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async createTask(insertTask: InsertTask): Promise<Task> {
+    const id = this.currentTaskId++;
+    const now = new Date();
+    const task: Task = {
+      ...insertTask,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.tasks.set(id, task);
+    return task;
+  }
+  
+  async updateTask(id: number, taskData: Partial<InsertTask>): Promise<Task | undefined> {
+    const task = this.tasks.get(id);
+    if (!task) return undefined;
+    
+    const updatedTask = {
+      ...task,
+      ...taskData,
+      updatedAt: new Date()
+    };
+    this.tasks.set(id, updatedTask);
+    return updatedTask;
+  }
+  
+  async deleteTask(id: number): Promise<boolean> {
+    // Also delete any attachments for this task
+    if (this.taskAttachments.has(id)) {
+      this.taskAttachments.delete(id);
+    }
+    
+    return this.tasks.delete(id);
+  }
+  
+  // Task Attachment Methods
+  async getTaskAttachment(id: number): Promise<TaskAttachment | undefined> {
+    // Find the attachment across all task attachments
+    for (const attachments of this.taskAttachments.values()) {
+      const attachment = attachments.find(a => a.id === id);
+      if (attachment) return attachment;
+    }
+    return undefined;
+  }
+  
+  async getTaskAttachments(taskId: number): Promise<TaskAttachment[]> {
+    return this.taskAttachments.get(taskId) || [];
+  }
+  
+  async createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment> {
+    const id = this.currentTaskAttachmentId++;
+    const taskAttachment: TaskAttachment = {
+      ...attachment,
+      id,
+      createdAt: new Date()
+    };
+    
+    // Get or create the attachments array for this task
+    const taskAttachments = this.taskAttachments.get(attachment.taskId) || [];
+    taskAttachments.push(taskAttachment);
+    this.taskAttachments.set(attachment.taskId, taskAttachments);
+    
+    return taskAttachment;
+  }
+  
+  async deleteTaskAttachment(id: number): Promise<boolean> {
+    // Find the task ID that contains this attachment
+    for (const [taskId, attachments] of this.taskAttachments.entries()) {
+      const index = attachments.findIndex(a => a.id === id);
+      if (index !== -1) {
+        // Remove the attachment from the array
+        attachments.splice(index, 1);
+        this.taskAttachments.set(taskId, attachments);
+        return true;
+      }
+    }
+    return false;
   }
 
   // Dashboard Methods

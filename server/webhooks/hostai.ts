@@ -1,40 +1,7 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { saveHostAITask, taskExists } from '../services/taskService';
-
-// Zod schema for HostAI webhook payload validation
-const hostAIAttachmentSchema = z.object({
-  name: z.string().optional(),
-  extension: z.string().optional(),
-  url: z.string().url()
-});
-
-const hostAIPayloadSchema = z.object({
-  external_id: z.string().optional(),
-  task: z.object({
-    action: z.string(),
-    description: z.string().optional(),
-    assignee: z.object({
-      firstName: z.string().optional(),
-      lastName: z.string().optional()
-    }).optional()
-  }),
-  source: z.object({
-    sourceType: z.string().optional(),
-    link: z.string().url().optional()
-  }).optional(),
-  guest: z.object({
-    guestName: z.string().optional(),
-    guestEmail: z.string().email().optional(),
-    guestPhone: z.string().optional()
-  }).optional(),
-  listing: z.object({
-    listingName: z.string().optional(),
-    listingId: z.string().optional()
-  }).optional(),
-  attachments: z.array(hostAIAttachmentSchema).optional(),
-  _creationDate: z.string().datetime().optional()
-});
+import { storage } from '../storage';
+import { env } from '../env';
 
 /**
  * Handle HostAI webhook requests
@@ -42,67 +9,81 @@ const hostAIPayloadSchema = z.object({
  * @param res Express response
  */
 export const handleHostAIWebhook = async (req: Request, res: Response) => {
-  const startTime = Date.now();
   try {
-    // 1. Check authorization (Bearer token)
+    // Start timing for performance logging
+    const startTime = Date.now();
+    
+    // Verify authentication using Bearer token
     const authHeader = req.headers.authorization;
-    const webhookSecret = process.env.WEBHOOK_SECRET;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.slice(7) !== webhookSecret) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid or missing authentication token'
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('Unauthorized webhook request: Missing Bearer token');
+      return res.status(401).json({ error: 'Unauthorized: Missing Bearer token' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    // Check if we're using the development placeholder secret
+    if (env.WEBHOOK_SECRET === 'dev-webhook-secret-placeholder-do-not-use-in-prod' && process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Using development webhook secret placeholder. Set a proper WEBHOOK_SECRET in production!');
+    }
+    
+    // Validate the token against the environment secret
+    if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) {
+      console.error('Unauthorized webhook request: Invalid token');
+      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+    
+    const webhookPayload = req.body;
+    
+    // Basic payload validation
+    if (!webhookPayload || typeof webhookPayload !== 'object') {
+      console.error('Invalid payload format');
+      return res.status(400).json({ error: 'Invalid payload format' });
+    }
+    
+    // Check for required fields
+    if (!webhookPayload.external_id) {
+      console.error('Missing external_id in payload');
+      return res.status(400).json({ error: 'Missing external_id in payload' });
+    }
+    
+    // Check for idempotency - don't process the same request twice
+    const exists = await taskExists(webhookPayload.external_id, webhookPayload.listing?.listingId);
+    
+    if (exists) {
+      console.log(`Ignoring duplicate task with external_id: ${webhookPayload.external_id}`);
+      return res.status(200).json({ 
+        status: 'success',
+        message: 'Task already exists, ignoring duplicate',
+        existed: true
       });
     }
     
-    // 2. Validate payload schema
-    const validationResult = hostAIPayloadSchema.safeParse(req.body);
-    
-    if (!validationResult.success) {
-      return res.status(422).json({
-        error: 'Invalid payload',
-        validation_errors: validationResult.error.format(),
-        message: 'The request payload does not match the expected schema'
-      });
-    }
-    
-    const payload = validationResult.data;
-    
-    // 3. Check for duplicate task (idempotency)
-    const isDuplicate = await taskExists(payload.external_id, payload.listing?.listingId);
-    
-    if (isDuplicate) {
-      return res.status(409).json({
-        error: 'Duplicate task',
-        message: 'A task with this external_id and listing_id already exists',
-        external_id: payload.external_id,
-        listing_id: payload.listing?.listingId
-      });
-    }
-    
-    // 4. Process and save the task
-    const savedTask = await saveHostAITask(payload);
-    
-    // 5. Return success response
-    const processingTime = Date.now() - startTime;
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Task successfully processed',
-      task_id: savedTask.id,
-      team_target: savedTask.teamTarget,
-      urgency: savedTask.urgency,
-      processing_time_ms: processingTime
+    // Store the webhook event for audit purposes
+    await storage.createWebhookEvent({
+      source: 'hostai',
+      payload: webhookPayload,
+      processed: false
     });
     
+    // Process and save the task
+    const task = await saveHostAITask(webhookPayload);
+    
+    // Calculate processing time
+    const processingTime = Date.now() - startTime;
+    
+    // Log performance metrics
+    console.log(`HostAI webhook processed in ${processingTime}ms`);
+    
+    // Return success with the created task
+    return res.status(201).json({
+      status: 'success',
+      task,
+      processingTime
+    });
   } catch (error) {
-    const processingTime = Date.now() - startTime;
     console.error('Error handling HostAI webhook:', error);
-    
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: 'An unexpected error occurred while processing the webhook',
-      processing_time_ms: processingTime
-    });
+    return res.status(500).json({ error: 'Internal server error processing webhook' });
   }
 };

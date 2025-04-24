@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { isAuthenticated, hasRole, isAdmin, validateWebhookSecret } from "./middlewares/authMiddleware";
 import { handleSuiteOpWebhook } from "./webhooks/webhookHandlers";
 import { handleHostAIWebhook } from "./webhooks/hostai";
-import { initWebSocket } from "./services/websocketService";
+import { initWebSocketServer } from "./services/websocketService";
 
 // Controllers
 import * as propertyController from "./controllers/propertyController";
@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // Initialize WebSocket server
-  initWebSocket(httpServer);
+  initWebSocketServer(httpServer);
   
   return httpServer;
 }

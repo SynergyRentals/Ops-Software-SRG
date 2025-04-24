@@ -1,74 +1,115 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
+import { log } from '../vite';
 import { Server } from 'http';
 
 let wss: WebSocketServer | null = null;
 
-/**
- * Initialize WebSocket server
- * @param server HTTP server instance
- * @returns WebSocket server instance
- */
-export const initWebSocket = (server: Server): WebSocketServer => {
-  // Create WebSocket server on a specific path to avoid conflicts with Vite HMR
-  wss = new WebSocketServer({ server, path: '/ws' });
-  
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('Client connected to WebSocket');
+// Initialize WebSocket server with HTTP server instance
+export const initWebSocketServer = (server: Server) => {
+  try {
+    // Create WebSocket server on a specific path to avoid conflicts with Vite HMR
+    wss = new WebSocketServer({ server, path: '/ws' });
     
-    // Send a welcome message
-    ws.send(JSON.stringify({
-      type: 'info',
-      message: 'Connected to PropertyHub WebSocket Server'
-    }));
+    log('WebSocket server initialized', 'websocket');
     
-    ws.on('message', (message: string) => {
-      try {
-        const data = JSON.parse(message.toString());
-        console.log('Received WebSocket message:', data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
+    // Set up connection handling
+    wss.on('connection', (ws: WebSocket) => {
+      log('Client connected to WebSocket', 'websocket');
+      
+      // Send initial welcome message
+      ws.send(JSON.stringify({
+        type: 'connection',
+        message: 'Connected to PropertyHub WebSocket server',
+        timestamp: new Date().toISOString()
+      }));
+      
+      // Handle incoming messages
+      ws.on('message', (data: string) => {
+        try {
+          const message = JSON.parse(data.toString());
+          log(`Received message: ${JSON.stringify(message)}`, 'websocket');
+          
+          // Handle different message types
+          if (message.type === 'ping') {
+            ws.send(JSON.stringify({
+              type: 'pong',
+              timestamp: new Date().toISOString()
+            }));
+          }
+        } catch (error) {
+          log(`Error processing message: ${error}`, 'websocket');
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Invalid message format',
+            timestamp: new Date().toISOString()
+          }));
+        }
+      });
+      
+      // Handle connection errors
+      ws.on('error', (error) => {
+        log(`WebSocket error: ${error}`, 'websocket');
+      });
+      
+      // Handle connection close
+      ws.on('close', () => {
+        log('Client disconnected from WebSocket', 'websocket');
+      });
     });
     
-    ws.on('close', () => {
-      console.log('Client disconnected from WebSocket');
+    // Handle server errors
+    wss.on('error', (error) => {
+      log(`WebSocket server error: ${error}`, 'websocket');
     });
-  });
-  
-  return wss;
+    
+    return wss;
+  } catch (error) {
+    log(`Failed to initialize WebSocket server: ${error}`, 'websocket');
+    throw error;
+  }
 };
 
-/**
- * Broadcast a message to all connected WebSocket clients
- * @param eventType Event type identifier
- * @param data Data to send
- */
-export const broadcast = (eventType: string, data: any): void => {
+// Broadcast a message to all connected clients
+export const broadcast = (type: string, data: any) => {
   if (!wss) {
-    console.warn('WebSocket server not initialized, cannot broadcast');
+    log('WebSocket server not initialized', 'websocket');
     return;
   }
   
   const message = JSON.stringify({
-    type: eventType,
+    type,
     data,
     timestamp: new Date().toISOString()
   });
   
-  let clientCount = 0;
+  let connectedClients = 0;
   
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
-      clientCount++;
+      connectedClients++;
     }
   });
   
-  console.log(`Broadcast ${eventType} to ${clientCount} clients`);
+  log(`Broadcasted ${type} to ${connectedClients} client(s)`, 'websocket');
 };
 
-/**
- * Get the WebSocket server instance
- * @returns The WebSocket server or null if not initialized
- */
-export const getWebSocketServer = (): WebSocketServer | null => wss;
+// Get the current WebSocket server instance
+export const getWebSocketServer = () => wss;
+
+// Close all connections and shut down the server
+export const closeWebSocketServer = () => {
+  if (!wss) {
+    log('WebSocket server not initialized', 'websocket');
+    return;
+  }
+  
+  wss.clients.forEach((client) => {
+    client.close();
+  });
+  
+  wss.close();
+  wss = null;
+  
+  log('WebSocket server closed', 'websocket');
+};

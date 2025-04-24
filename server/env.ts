@@ -9,7 +9,8 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(16).optional().default("super-secret-session-key-change-me"),
   
   // Webhooks
-  WEBHOOK_SECRET: z.string().min(16),
+  WEBHOOK_SECRET: z.string().min(16).optional()
+    .default(process.env.NODE_ENV === 'development' ? 'dev-webhook-secret-placeholder-do-not-use-in-prod' : undefined),
   HOSTAI_WEBHOOK_SECRET: z.string().min(16).optional(),
   SUITEOP_WEBHOOK_SECRET: z.string().min(16).optional(),
 });

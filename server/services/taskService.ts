@@ -1,5 +1,5 @@
 import { storage } from '../storage';
-import { InsertTask, InsertTaskAttachment, TaskTeamTarget, TaskUrgency, Task } from '@shared/schema';
+import { type Task, type InsertTask, type TaskAttachment, type InsertTaskAttachment } from '@shared/schema';
 import { broadcast } from './websocketService';
 
 interface HostAIPayload {
@@ -42,19 +42,52 @@ interface HostAIPayload {
 export const determineTeamTarget = (action: string): string => {
   action = action.toLowerCase();
   
-  if (action.includes('clean') || action.includes('cleaning')) {
-    return TaskTeamTarget.Cleaning;
+  // Cleaning related keywords
+  if (action.includes('clean') || 
+      action.includes('wash') || 
+      action.includes('vacuum') || 
+      action.includes('dust') || 
+      action.includes('sweep') ||
+      action.includes('mop') ||
+      action.includes('laundry') ||
+      action.includes('linens') ||
+      action.includes('bedding') ||
+      action.includes('towels')) {
+    return 'cleaning';
   }
   
-  if (action.includes('maintenance') || 
+  // Maintenance related keywords
+  if (action.includes('fix') || 
       action.includes('repair') || 
-      action.includes('fix') || 
-      action.includes('broken')) {
-    return TaskTeamTarget.Maintenance;
+      action.includes('replace') || 
+      action.includes('broken') || 
+      action.includes('leak') ||
+      action.includes('plumb') ||
+      action.includes('electric') ||
+      action.includes('hvac') ||
+      action.includes('heat') ||
+      action.includes('cool') ||
+      action.includes('air conditioning') ||
+      action.includes('appliance')) {
+    return 'maintenance';
   }
   
-  // Default to internal team
-  return TaskTeamTarget.Internal;
+  // Landlord related keywords
+  if (action.includes('lease') || 
+      action.includes('contract') || 
+      action.includes('payment') || 
+      action.includes('bill') || 
+      action.includes('landlord') ||
+      action.includes('owner') ||
+      action.includes('rent') ||
+      action.includes('extension') ||
+      action.includes('legal') ||
+      action.includes('permit')) {
+    return 'landlord';
+  }
+  
+  // Default to internal
+  return 'internal';
 };
 
 /**
@@ -64,34 +97,53 @@ export const determineTeamTarget = (action: string): string => {
  * @returns The appropriate urgency level
  */
 export const determineUrgency = (action: string, description?: string): string => {
-  const combinedText = (action + ' ' + (description || '')).toLowerCase();
+  const text = `${action} ${description || ''}`.toLowerCase();
   
-  // Check for urgent keywords
-  if (combinedText.includes('urgent') || 
-      combinedText.includes('emergency') ||
-      combinedText.includes('immediately') ||
-      combinedText.includes('asap') ||
-      combinedText.includes('leak') ||
-      combinedText.includes('flooding')) {
-    return TaskUrgency.Urgent;
+  // Urgent keywords - safety and critical issues
+  if (text.includes('emergency') || 
+      text.includes('urgent') || 
+      text.includes('immediately') || 
+      text.includes('asap') || 
+      text.includes('safety') ||
+      text.includes('dangerous') ||
+      text.includes('gas leak') ||
+      text.includes('fire') ||
+      text.includes('flood') ||
+      text.includes('electrical issue') ||
+      text.includes('no water') ||
+      text.includes('no power') ||
+      text.includes('no heat') ||
+      text.includes('security')) {
+    return 'urgent';
   }
   
-  // Check for high priority keywords
-  if (combinedText.includes('high priority') || 
-      combinedText.includes('important') ||
-      combinedText.includes('soon')) {
-    return TaskUrgency.High;
+  // High priority keywords - affecting guest stay
+  if (text.includes('important') || 
+      text.includes('high priority') || 
+      text.includes('soon') || 
+      text.includes('within 24 hours') || 
+      text.includes('guest complaint') ||
+      text.includes('not working') ||
+      text.includes('broken') ||
+      text.includes('leak') ||
+      text.includes('wifi')) {
+    return 'high';
   }
   
-  // Check for low priority keywords
-  if (combinedText.includes('low priority') || 
-      combinedText.includes('when convenient') ||
-      combinedText.includes('sometime')) {
-    return TaskUrgency.Low;
+  // Low priority keywords - minor issues
+  if (text.includes('low priority') || 
+      text.includes('when convenient') || 
+      text.includes('sometime') || 
+      text.includes('eventually') || 
+      text.includes('minor') ||
+      text.includes('cosmetic') ||
+      text.includes('suggestion') ||
+      text.includes('idea')) {
+    return 'low';
   }
   
-  // Default to medium
-  return TaskUrgency.Medium;
+  // Default to medium priority
+  return 'medium';
 };
 
 /**
