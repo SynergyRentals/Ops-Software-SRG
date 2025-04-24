@@ -15,9 +15,14 @@ import * as scheduleController from "./controllers/scheduleController";
 import * as dashboardController from "./controllers/dashboardController";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Serve the property viewer HTML page
+  // Serve static HTML pages
   app.get('/property-viewer', (req, res) => {
     res.sendFile('property_viewer.html', { root: './' });
+  });
+  
+  // Serve the WebSocket client test page
+  app.get('/ws-client', (req, res) => {
+    res.sendFile('tests/ws-client.html', { root: './' });
   });
   // Setup authentication
   await setupAuth(app);
