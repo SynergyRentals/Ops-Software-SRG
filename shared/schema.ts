@@ -2,6 +2,28 @@ import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey, 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Enum types for task status and urgency
+export const TaskTeamTarget = {
+  Internal: "internal",
+  Cleaning: "cleaning",
+  Maintenance: "maintenance",
+  Landlord: "landlord"
+} as const;
+
+export const TaskUrgency = {
+  Urgent: "urgent",
+  High: "high",
+  Medium: "medium",
+  Low: "low"
+} as const;
+
+export const TaskStatus = {
+  New: "new",
+  Scheduled: "scheduled",
+  Watch: "watch",
+  Closed: "closed"
+} as const;
+
 // User model
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -85,6 +107,36 @@ export const webhookEvents = pgTable("webhook_events", {
   payload: jsonb("payload").notNull(),
   processed: boolean("processed").notNull().default(false),
   receivedAt: timestamp("received_at").defaultNow().notNull(),
+});
+
+// Tasks (HostAI guest-request tasks) model
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  externalId: varchar("external_id").unique(), // HostAI event ID (nullable)
+  listingId: varchar("listing_id"), // HostAI listingId
+  listingName: text("listing_name"),
+  action: text("action"),
+  description: text("description"),
+  sourceType: varchar("source_type"),
+  sourceLink: text("source_link"),
+  guestName: text("guest_name"),
+  guestEmail: text("guest_email"),
+  guestPhone: text("guest_phone"),
+  teamTarget: text("team_target", { enum: Object.values(TaskTeamTarget) }).notNull().default(TaskTeamTarget.Internal),
+  urgency: text("urgency", { enum: Object.values(TaskUrgency) }).notNull().default(TaskUrgency.Medium),
+  status: text("status", { enum: Object.values(TaskStatus) }).notNull().default(TaskStatus.New),
+  scheduledFor: timestamp("scheduled_for"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  rawPayload: jsonb("raw_payload").notNull(),
+});
+
+// Task Attachments model
+export const taskAttachments = pgTable("task_attachments", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => tasks.id, { onDelete: "cascade" }).notNull(),
+  name: text("name"),
+  extension: varchar("extension"),
+  url: text("url").notNull(),
 });
 
 // Create Zod schemas for inserting
