@@ -13,25 +13,55 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     // Start timing for performance logging
     const startTime = Date.now();
     
-    // Verify authentication using Bearer token
-    const authHeader = req.headers.authorization;
+    // Different authentication strategies
+    let authenticated = false;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('Unauthorized webhook request: Missing Bearer token');
-      return res.status(401).json({ error: 'Unauthorized: Missing Bearer token' });
-    }
+    // Check if we're in development mode with the placeholder secret
+    const isDevelopmentMode = process.env.NODE_ENV === 'development';
+    const isUsingDevSecret = env.WEBHOOK_SECRET === 'dev-webhook-secret-placeholder-do-not-use-in-prod';
     
-    const token = authHeader.split(' ')[1];
-    
-    // Check if we're using the development placeholder secret
-    if (env.WEBHOOK_SECRET === 'dev-webhook-secret-placeholder-do-not-use-in-prod' && process.env.NODE_ENV === 'development') {
+    if (isDevelopmentMode && isUsingDevSecret) {
       console.warn('⚠️ Using development webhook secret placeholder. Set a proper WEBHOOK_SECRET in production!');
+      
+      // In development, check for Bearer token but don't require it if webhookKeyParam is present
+      const authHeader = req.headers.authorization;
+      const webhookKeyParam = req.query.key;
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // Verify Bearer token if provided
+        const token = authHeader.split(' ')[1];
+        if (token === env.WEBHOOK_SECRET) {
+          authenticated = true;
+        }
+      }
+      
+      // Accept key in URL query parameter as fallback in development
+      if (!authenticated && webhookKeyParam === env.WEBHOOK_SECRET) {
+        authenticated = true;
+        console.warn('⚠️ Using query parameter for webhook authentication - not recommended for production!');
+      }
+      
+      // In development, allow requests without authentication if WEBHOOK_REQUIRE_AUTH is "false"
+      if (!authenticated && process.env.WEBHOOK_REQUIRE_AUTH === "false") {
+        authenticated = true;
+        console.warn('⚠️ SECURITY RISK: Webhook authentication is disabled. This should NEVER be used in production!');
+      }
+    } else {
+      // In production, only accept proper Bearer token authentication
+      const authHeader = req.headers.authorization;
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        if (env.WEBHOOK_SECRET && token === env.WEBHOOK_SECRET) {
+          authenticated = true;
+        }
+      }
     }
     
-    // Validate the token against the environment secret
-    if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) {
-      console.error('Unauthorized webhook request: Invalid token');
-      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    // Reject unauthenticated requests
+    if (!authenticated) {
+      console.error('Unauthorized webhook request: Authentication failed');
+      return res.status(401).json({ error: 'Unauthorized: Authentication failed' });
     }
     
     const webhookPayload = req.body;

@@ -11,6 +11,7 @@ const envSchema = z.object({
   // Webhooks
   WEBHOOK_SECRET: z.string().min(16).optional()
     .default(process.env.NODE_ENV === 'development' ? 'dev-webhook-secret-placeholder-do-not-use-in-prod' : undefined),
+  WEBHOOK_REQUIRE_AUTH: z.enum(["true", "false"]).optional().default("true"),
   HOSTAI_WEBHOOK_SECRET: z.string().min(16).optional(),
   SUITEOP_WEBHOOK_SECRET: z.string().min(16).optional(),
 });
