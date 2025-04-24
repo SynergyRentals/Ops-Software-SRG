@@ -10,13 +10,12 @@ import { PropertyList } from "@/components/dashboard/property-list";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
-import { Plus, RefreshCcw } from "lucide-react";
+import { Plus, RefreshCcw, Wrench } from "lucide-react";
 import { useState } from "react";
-import { CreateTaskDialog } from "@/components/maintenance/create-task-dialog";
+import { QuickRequestDialog } from "@/components/maintenance/quick-request-dialog";
 
 export default function Dashboard() {
   const [_, navigate] = useLocation();
-  const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
 
   const { data: dashboardStats, isLoading: statsLoading } = useQuery<{
     propertiesCount: number;
@@ -63,13 +62,14 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <div className="flex space-x-3">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowCreateTaskDialog(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Task
-          </Button>
+          <QuickRequestDialog 
+            trigger={
+              <Button variant="outline">
+                <Wrench className="mr-2 h-4 w-4" />
+                Maintenance Request
+              </Button>
+            }
+          />
           <Button 
             onClick={() => navigate("/schedule")}
           >
@@ -177,14 +177,17 @@ export default function Dashboard() {
           ) : (
             <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-lg text-center">
               <p className="text-muted-foreground">No pending tasks at the moment</p>
-              <Button 
-                className="mt-4" 
-                variant="outline"
-                onClick={() => setShowCreateTaskDialog(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create New Task
-              </Button>
+              <QuickRequestDialog
+                trigger={
+                  <Button 
+                    className="mt-4" 
+                    variant="outline"
+                  >
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Create Maintenance Request
+                  </Button>
+                }
+              />
             </div>
           )}
         </div>
@@ -195,12 +198,6 @@ export default function Dashboard() {
 
       {/* Properties Section */}
       <PropertyList />
-
-      {/* Create Task Dialog */}
-      <CreateTaskDialog 
-        isOpen={showCreateTaskDialog} 
-        onClose={() => setShowCreateTaskDialog(false)}
-      />
     </MainLayout>
   );
 }

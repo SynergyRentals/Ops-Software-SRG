@@ -20,9 +20,13 @@ export function Scheduler() {
           <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}>
             AI Suggestions
           </Button>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Task
-          </Button>
+          <QuickRequestDialog 
+            trigger={
+              <Button>
+                <Wrench className="mr-2 h-4 w-4" /> Maintenance Request
+              </Button>
+            }
+          />
         </div>
       </div>
       

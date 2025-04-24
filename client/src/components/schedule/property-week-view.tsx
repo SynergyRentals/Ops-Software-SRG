@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { format, addDays, startOfWeek, isToday, isSameDay } from "date-fns";
 import { Property, MaintenanceTask } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar } from "lucide-react";
+import { Loader2, RefreshCw, ChevronLeft, ChevronRight, User, Clock, Check, AlertTriangle, Home, Calendar, Plus, Wrench } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import "./property-week-view.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePropertyCalendarEvents, CalendarEvent } from "@/hooks/use-property-calendar";
+import { QuickRequestDialog } from "@/components/maintenance/quick-request-dialog";
 
 interface EventCard {
   id: string;
@@ -354,7 +355,17 @@ export function PropertyWeekView({ defaultDate = new Date() }: PropertyWeekViewP
                         className={`day-column cell ${isToday(day.date) ? 'today-cell' : ''}`}
                       >
                         {dayEvents.length === 0 ? (
-                          <div className="empty-cell"></div>
+                          <div className="empty-cell flex items-center justify-center">
+                            <QuickRequestDialog
+                              defaultPropertyId={property.id}
+                              trigger={
+                                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs opacity-40 hover:opacity-100 transition-opacity">
+                                  <Wrench className="h-3 w-3 mr-1" />
+                                  Request
+                                </Button>
+                              }
+                            />
+                          </div>
                         ) : (
                           <div className="event-cards">
                             {dayEvents.map((event: EventCard) => (
