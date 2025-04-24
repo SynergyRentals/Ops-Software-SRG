@@ -122,9 +122,9 @@ export const tasks = pgTable("tasks", {
   guestName: text("guest_name"),
   guestEmail: text("guest_email"),
   guestPhone: text("guest_phone"),
-  teamTarget: text("team_target", { enum: Object.values(TaskTeamTarget) }).notNull().default(TaskTeamTarget.Internal),
-  urgency: text("urgency", { enum: Object.values(TaskUrgency) }).notNull().default(TaskUrgency.Medium),
-  status: text("status", { enum: Object.values(TaskStatus) }).notNull().default(TaskStatus.New),
+  teamTarget: text("team_target", { enum: ["internal", "cleaning", "maintenance", "landlord"] }).notNull().default(TaskTeamTarget.Internal),
+  urgency: text("urgency", { enum: ["urgent", "high", "medium", "low"] }).notNull().default(TaskUrgency.Medium),
+  status: text("status", { enum: ["new", "scheduled", "watch", "closed"] }).notNull().default(TaskStatus.New),
   scheduledFor: timestamp("scheduled_for"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   rawPayload: jsonb("raw_payload").notNull(),
@@ -198,6 +198,31 @@ export const insertWebhookEventSchema = createInsertSchema(webhookEvents).pick({
   processed: true,
 });
 
+export const insertTaskSchema = createInsertSchema(tasks).pick({
+  externalId: true,
+  listingId: true,
+  listingName: true,
+  action: true,
+  description: true,
+  sourceType: true,
+  sourceLink: true,
+  guestName: true,
+  guestEmail: true,
+  guestPhone: true,
+  teamTarget: true,
+  urgency: true,
+  status: true,
+  scheduledFor: true,
+  rawPayload: true,
+});
+
+export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).pick({
+  taskId: true,
+  name: true,
+  extension: true,
+  url: true,
+});
+
 // Define types for the schemas
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -219,6 +244,12 @@ export type SupplyRequestItem = typeof supplyRequestItems.$inferSelect;
 
 export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
+
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type Task = typeof tasks.$inferSelect;
+
+export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
+export type TaskAttachment = typeof taskAttachments.$inferSelect;
 
 // CSV Import Schema
 export const propertyCsvSchema = z.object({
