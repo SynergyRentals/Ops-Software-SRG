@@ -4,8 +4,9 @@ import { PropertyWeekView } from './property-week-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Wrench } from 'lucide-react';
 import { AISchedulerDialog as AIDialog } from './ai-scheduler-dialog';
+import { QuickRequestDialog } from '@/components/maintenance/quick-request-dialog';
 
 export function Scheduler() {
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);

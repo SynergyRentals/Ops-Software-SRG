@@ -49,8 +49,10 @@ import {
   Edit,
   Trash2,
   Calendar,
-  Loader2
+  Loader2,
+  Wrench
 } from "lucide-react";
+import { QuickRequestDialog } from "@/components/maintenance/quick-request-dialog";
 import { useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EditPropertyDialog } from "./edit-property-dialog";
@@ -183,6 +185,19 @@ export function PropertyTable({ data }: PropertyTableProps) {
         
         return (
           <div className="flex space-x-2">
+            <QuickRequestDialog
+              defaultPropertyId={property.id}
+              trigger={
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                >
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Request
+                </Button>
+              }
+            />
             <Button
               variant="outline" 
               size="sm"
