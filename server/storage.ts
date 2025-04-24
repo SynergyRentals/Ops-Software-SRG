@@ -922,6 +922,88 @@ export class DatabaseStorage implements IStorage {
     
     return event || undefined;
   }
+  
+  // Task Methods
+  async getTask(id: number): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
+  }
+  
+  async getTaskByExternalId(externalId: string): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.externalId, externalId));
+    return task || undefined;
+  }
+  
+  async getTasks(filters?: { status?: string, urgency?: string, teamTarget?: string }): Promise<Task[]> {
+    let query = db.select().from(tasks);
+    
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.status) {
+        conditions.push(eq(tasks.status, filters.status));
+      }
+      
+      if (filters.urgency) {
+        conditions.push(eq(tasks.urgency, filters.urgency));
+      }
+      
+      if (filters.teamTarget) {
+        conditions.push(eq(tasks.teamTarget, filters.teamTarget));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    // Sort by createdAt descending (newest first)
+    return await query.orderBy(desc(tasks.createdAt));
+  }
+  
+  async createTask(task: InsertTask): Promise<Task> {
+    const [savedTask] = await db.insert(tasks).values(task).returning();
+    return savedTask;
+  }
+  
+  async updateTask(id: number, taskData: Partial<InsertTask>): Promise<Task | undefined> {
+    const [updatedTask] = await db
+      .update(tasks)
+      .set({
+        ...taskData,
+        updatedAt: new Date()
+      })
+      .where(eq(tasks.id, id))
+      .returning();
+    
+    return updatedTask || undefined;
+  }
+  
+  async deleteTask(id: number): Promise<boolean> {
+    // Note: This will cascade delete attachments due to foreign key constraint
+    const result = await db.delete(tasks).where(eq(tasks.id, id));
+    return result.count > 0;
+  }
+  
+  // Task Attachment Methods
+  async getTaskAttachment(id: number): Promise<TaskAttachment | undefined> {
+    const [attachment] = await db.select().from(taskAttachments).where(eq(taskAttachments.id, id));
+    return attachment || undefined;
+  }
+  
+  async getTaskAttachments(taskId: number): Promise<TaskAttachment[]> {
+    return await db.select().from(taskAttachments).where(eq(taskAttachments.taskId, taskId));
+  }
+  
+  async createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment> {
+    const [savedAttachment] = await db.insert(taskAttachments).values(attachment).returning();
+    return savedAttachment;
+  }
+  
+  async deleteTaskAttachment(id: number): Promise<boolean> {
+    const result = await db.delete(taskAttachments).where(eq(taskAttachments.id, id));
+    return result.count > 0;
+  }
 
   // Dashboard Methods
   async getDashboardStats(): Promise<{ propertiesCount: number; pendingTasks: number; completedTasks: number; inventoryAlerts: number; }> {

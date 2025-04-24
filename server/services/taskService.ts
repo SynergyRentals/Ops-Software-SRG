@@ -121,8 +121,8 @@ export const saveHostAITask = async (payload: HostAIPayload): Promise<Task> => {
       guestName: payload.guest?.guestName,
       guestEmail: payload.guest?.guestEmail,
       guestPhone: payload.guest?.guestPhone,
-      teamTarget,
-      urgency,
+      teamTarget: teamTarget as "internal" | "cleaning" | "maintenance" | "landlord",
+      urgency: urgency as "urgent" | "high" | "medium" | "low",
       status: 'new',
       scheduledFor: payload._creationDate ? new Date(payload._creationDate) : undefined,
       rawPayload: payload
