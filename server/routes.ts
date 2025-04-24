@@ -3,7 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { isAuthenticated, hasRole, isAdmin, validateWebhookSecret } from "./middlewares/authMiddleware";
-import { handleHostAiWebhook, handleSuiteOpWebhook } from "./webhooks/webhookHandlers";
+import { handleSuiteOpWebhook } from "./webhooks/webhookHandlers";
+import { handleHostAIWebhook } from "./webhooks/hostai";
+import { initWebSocket } from "./services/websocketService";
 
 // Controllers
 import * as propertyController from "./controllers/propertyController";
@@ -73,9 +75,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/schedule/task", isAuthenticated, scheduleController.createScheduledTask);
   
   // Webhook routes
-  app.post("/api/webhooks/hostai", validateWebhookSecret("hostai"), handleHostAiWebhook);
+  // Legacy webhook routes with x-webhook-secret header
   app.post("/api/webhooks/suiteop", validateWebhookSecret("suiteop"), handleSuiteOpWebhook);
+  app.post("/api/webhooks/hostai", validateWebhookSecret("hostai"), function(req, res) {
+    res.status(410).json({ message: 'This endpoint is deprecated. Please use /webhooks/hostai instead' });
+  });
   
+  // New secure webhook route with Bearer token auth
+  app.post("/webhooks/hostai", handleHostAIWebhook);
+  
+  // Create HTTP server
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket server
+  initWebSocket(httpServer);
+  
   return httpServer;
 }

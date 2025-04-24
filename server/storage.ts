@@ -18,6 +18,12 @@ import {
   SupplyRequestItem, 
   InsertSupplyRequestItem, 
   webhookEvents,
+  tasks,
+  Task,
+  InsertTask,
+  taskAttachments,
+  TaskAttachment,
+  InsertTaskAttachment,
   WebhookEvent,
   InsertWebhookEvent,
   PropertyCsvData
@@ -75,6 +81,20 @@ export interface IStorage {
   createWebhookEvent(event: InsertWebhookEvent): Promise<WebhookEvent>;
   getWebhookEvents(processed?: boolean): Promise<WebhookEvent[]>;
   updateWebhookEvent(id: number, event: Partial<InsertWebhookEvent>): Promise<WebhookEvent | undefined>;
+  
+  // Task Methods
+  getTask(id: number): Promise<Task | undefined>;
+  getTaskByExternalId(externalId: string): Promise<Task | undefined>;
+  getTasks(filters?: { status?: string, urgency?: string, teamTarget?: string }): Promise<Task[]>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
+  deleteTask(id: number): Promise<boolean>;
+  
+  // Task Attachment Methods
+  getTaskAttachment(id: number): Promise<TaskAttachment | undefined>;
+  getTaskAttachments(taskId: number): Promise<TaskAttachment[]>;
+  createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
+  deleteTaskAttachment(id: number): Promise<boolean>;
   
   // Dashboard Methods
   getDashboardStats(): Promise<{
