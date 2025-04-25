@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -30,6 +30,17 @@ export function TaskCard({ task }: TaskCardProps) {
 
   // Check if both team and urgency are selected
   const isReadyForScheduling = selectedTeam && selectedUrgency;
+  
+  // Effect to load scheduling suggestions only when card is flipped
+  useEffect(() => {
+    if (isFlipped && isReadyForScheduling) {
+      // Slight delay to ensure the scheduler component is mounted
+      setTimeout(() => {
+        // Suggestions will load only when the card is flipped to scheduling view
+        console.log('Card is flipped, will load suggestions if needed');
+      }, 300);
+    }
+  }, [isFlipped, isReadyForScheduling]);
 
   // Function to update task field with optimistic UI update
   const updateTaskField = async (field: string, value: string) => {

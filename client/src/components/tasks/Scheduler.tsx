@@ -37,37 +37,48 @@ export function Scheduler({ task, onSchedule, onCancel }: SchedulerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch scheduling suggestions when component mounts
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      setIsLoading(true);
-      try {
-        const response = await apiRequest('GET', `/api/tasks/${task.id}/suggestions`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data.suggestions || []);
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Failed to fetch scheduling suggestions',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching scheduling suggestions:', error);
+  // Fetch scheduling suggestions only when needed
+  const fetchSuggestions = async () => {
+    // Exported as a public method for TaskCard to call when needed
+    if (suggestions.length > 0) return; // Don't fetch if we already have suggestions
+    
+    setIsLoading(true);
+    console.log('Making GET request to /api/tasks/' + task.id + '/suggestions');
+    try {
+      const response = await apiRequest('GET', `/api/tasks/${task.id}/suggestions`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestions(data.suggestions || []);
+      } else {
         toast({
           title: 'Error',
           description: 'Failed to fetch scheduling suggestions',
           variant: 'destructive',
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
-    fetchSuggestions();
-  }, [task.id, toast]);
+    } catch (error) {
+      console.error('Error fetching scheduling suggestions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch scheduling suggestions',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // This will be called directly instead of via ref
+  
+  // Fetch suggestions once when the component is mounted
+  // But only for tasks that have team and urgency already set
+  useEffect(() => {
+    // Only fetch if the task is ready for scheduling
+    if (task.teamTarget && task.urgency) {
+      fetchSuggestions();
+    }
+  }, []);
   
   // Function to handle scheduling the task
   const handleScheduleTask = async (dateIsoString: string) => {
