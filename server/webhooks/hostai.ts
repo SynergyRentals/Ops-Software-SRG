@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { saveTaskFromHostAI, taskExists } from '../services/taskService';
+import { saveTaskFromHostAI } from '../services/taskService';
 import { storage } from '../storage';
 import { env } from '../env';
 import { hostAiWebhookSchema } from './schemas';
@@ -37,15 +37,21 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
       const webhookPayload = hostAiWebhookSchema.parse(req.body);
       
       // Check for idempotency - don't process the same request twice
-      const exists = await taskExists(webhookPayload.external_id, webhookPayload.listing?.listingId);
-      
-      if (exists) {
-        console.log(`Ignoring duplicate task with external_id: ${webhookPayload.external_id}`);
-        return res.status(409).json({ 
-          status: 'ignored',
-          message: 'Task already exists, ignoring duplicate',
-          code: 'DUPLICATE_TASK'
-        });
+      try {
+        const existingTask = await storage.getTaskByExternalId(webhookPayload.external_id);
+        
+        if (existingTask) {
+          console.log(`Ignoring duplicate task with external_id: ${webhookPayload.external_id}`);
+          return res.status(409).json({ 
+            status: 'ignored',
+            message: 'Task already exists, ignoring duplicate',
+            code: 'DUPLICATE_TASK'
+          });
+        }
+      } catch (error) {
+        console.error('Error checking for existing task:', error);
+        // If there was an error checking for duplicates, we'll continue and let the database
+        // handle any constraint violations
       }
       
       // Store the webhook event for audit purposes

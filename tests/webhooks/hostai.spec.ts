@@ -6,13 +6,13 @@ import { handleHostAIWebhook } from '../../server/webhooks/hostai';
 
 // Mock dependencies
 vi.mock('../../server/services/taskService', () => ({
-  taskExists: vi.fn(),
   saveTaskFromHostAI: vi.fn()
 }));
 
 vi.mock('../../server/storage', () => ({
   storage: {
-    createWebhookEvent: vi.fn()
+    createWebhookEvent: vi.fn(),
+    getTaskByExternalId: vi.fn()
   }
 }));
 
@@ -23,12 +23,12 @@ vi.mock('../../server/env', () => ({
 }));
 
 // Import mocks
-import { taskExists, saveTaskFromHostAI } from '../../server/services/taskService';
+import { saveTaskFromHostAI } from '../../server/services/taskService';
 import { storage } from '../../server/storage';
 
 describe('HostAI Webhook Handler', () => {
   let app: express.Express;
-  let mockTaskExists: any;
+  let mockGetTaskByExternalId: any;
   let mockSaveTask: any;
   let mockCreateWebhookEvent: any;
   
@@ -38,12 +38,12 @@ describe('HostAI Webhook Handler', () => {
     app.post('/api/webhooks/hostai', handleHostAIWebhook);
     
     // Reset mocks
-    mockTaskExists = vi.mocked(taskExists).mockReset();
+    mockGetTaskByExternalId = vi.mocked(storage.getTaskByExternalId).mockReset();
     mockSaveTask = vi.mocked(saveTaskFromHostAI).mockReset();
     mockCreateWebhookEvent = vi.mocked(storage.createWebhookEvent).mockReset();
     
     // Default successful implementations
-    mockTaskExists.mockResolvedValue(false);
+    mockGetTaskByExternalId.mockResolvedValue(null); // No existing task
     mockSaveTask.mockResolvedValue({ id: 1, externalId: 'test-external-id' });
     mockCreateWebhookEvent.mockResolvedValue({ id: 1 });
   });
@@ -77,7 +77,7 @@ describe('HostAI Webhook Handler', () => {
     
     expect(response.status).toBe(201);
     expect(response.body.status).toBe('success');
-    expect(mockTaskExists).toHaveBeenCalledWith('test-external-id', 'prop-123');
+    expect(mockGetTaskByExternalId).toHaveBeenCalledWith('test-external-id');
     expect(mockCreateWebhookEvent).toHaveBeenCalled();
     expect(mockSaveTask).toHaveBeenCalledWith(validPayload);
   });
@@ -89,7 +89,7 @@ describe('HostAI Webhook Handler', () => {
       .send(validPayload);
     
     expect(response.status).toBe(401);
-    expect(mockTaskExists).not.toHaveBeenCalled();
+    expect(mockGetTaskByExternalId).not.toHaveBeenCalled();
     expect(mockCreateWebhookEvent).not.toHaveBeenCalled();
     expect(mockSaveTask).not.toHaveBeenCalled();
   });
@@ -100,7 +100,7 @@ describe('HostAI Webhook Handler', () => {
       .send(validPayload);
     
     expect(response.status).toBe(401);
-    expect(mockTaskExists).not.toHaveBeenCalled();
+    expect(mockGetTaskByExternalId).not.toHaveBeenCalled();
   });
   
   it('should return 422 with invalid payload', async () => {
@@ -122,7 +122,12 @@ describe('HostAI Webhook Handler', () => {
   });
   
   it('should return 409 for duplicate tasks', async () => {
-    mockTaskExists.mockResolvedValue(true);
+    // Mock that a task with the same external ID already exists
+    mockGetTaskByExternalId.mockResolvedValue({ 
+      id: 1, 
+      externalId: 'test-external-id',
+      listingId: 'prop-123'
+    });
     
     const response = await supertest(app)
       .post('/api/webhooks/hostai')

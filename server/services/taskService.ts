@@ -150,50 +150,44 @@ export const saveTaskFromHostAI = async (payload: HostAiWebhookPayload): Promise
     };
     
     // Save task to database
-    const task = await storage.createTask(taskData);
-    
-    // If attachments exist, save them
-    if (payload.attachments && Array.isArray(payload.attachments) && payload.attachments.length > 0) {
-      const attachmentsData: InsertTaskAttachment[] = payload.attachments.map((attachment) => ({
-        taskId: task.id,
-        name: attachment.name || null,
-        extension: attachment.extension || null,
-        url: attachment.url
-      }));
+    try {
+      const task = await storage.createTask(taskData);
       
-      await Promise.all(attachmentsData.map(attachment => 
-        storage.createTaskAttachment(attachment)
-      ));
+      // If attachments exist, save them
+      if (payload.attachments && Array.isArray(payload.attachments) && payload.attachments.length > 0) {
+        const attachmentsData: InsertTaskAttachment[] = payload.attachments.map((attachment) => ({
+          taskId: task.id,
+          name: attachment.name || null,
+          extension: attachment.extension || null,
+          url: attachment.url
+        }));
+        
+        await Promise.all(attachmentsData.map(attachment => 
+          storage.createTaskAttachment(attachment)
+        ));
+      }
+      
+      // Broadcast the new task to WebSocket clients
+      broadcast('task:new', task);
+      
+      return task;
+    } catch (dbError: any) {
+      // Check if this is a duplicate key error (constraint violation)
+      if (dbError.code === '23505' && dbError.constraint === 'tasks_external_id_key') {
+        console.log(`Detected duplicate task with external_id: ${payload.external_id}`);
+        // The task exists, so find and return it instead
+        const existingTask = await storage.getTaskByExternalId(payload.external_id);
+        if (existingTask) {
+          return existingTask;
+        }
+      }
+      // Re-throw other database errors
+      throw dbError;
     }
-    
-    // Broadcast the new task to WebSocket clients
-    broadcast('task:new', task);
-    
-    return task;
   } catch (error) {
     console.error('Error saving HostAI task:', error);
     throw error;
   }
 };
 
-/**
- * Check if a task with the given external ID and listing ID already exists
- * @param externalId - The external ID of the task
- * @param listingId - The listing ID
- * @returns True if a task already exists, otherwise false
- */
-export const taskExists = async (externalId?: string, listingId?: string): Promise<boolean> => {
-  if (!externalId) return false;
-  
-  const existingTask = await storage.getTaskByExternalId(externalId);
-  
-  // If no task found with this external ID, it doesn't exist
-  if (!existingTask) return false;
-  
-  // If listing ID is provided, make sure it matches
-  if (listingId && existingTask.listingId !== listingId) {
-    return false;
-  }
-  
-  return true;
-};
+// taskExists function has been removed and replaced with direct calls to storage.getTaskByExternalId

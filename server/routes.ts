@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(safeUsers);
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ message: "Error fetching users", error: error.message });
     }
   });
