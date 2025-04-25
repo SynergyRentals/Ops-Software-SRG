@@ -1,0 +1,69 @@
+GOAL
+Refactor HostAI webhook to use a single static endpoint
+    POST /api/webhooks/hostai
+and ONE optional secret (Bearer token). Remove all other HostAI-specific
+env vars & dynamic URL params.
+
+CONTEXT
+• Repo layout: /server (Express + Drizzle), /shared/schema.ts, /client, /tests.
+• Webhook JSON spec (from HostAI screenshot) already modelled in schema.
+• Drizzle PostgreSQL DB, ws broadcast helper available as ws.broadcast().
+• Testing stack: Vitest + Supertest.
+
+TASKS
+1. 🧹  Cleanup env
+   • Delete any HOSTAI_* vars from code & .env.example.
+   • Add WEBHOOK_SECRET to .env.example (optional).
+
+2. 🔐  Env validation
+   • In env.ts (create if missing) load process.env, validate with Zod:
+     { WEBHOOK_SECRET: z.string().optional() }
+   • Export as `env`.
+
+3. 🚏  Rewrite route
+   • Replace existing HostAI router(s) with `/server/webhooks/hostai.ts`
+     – POST /api/webhooks/hostai
+     – If env.WEBHOOK_SECRET is set, expect header
+         Authorization: Bearer <secret>
+       → else skip auth.
+     – Validate req.body with Zod schema (copy from previous prompt).
+     – Call `saveTaskFromHostAI(payload)` and return 200.
+
+4. 🛠  Service helper
+   • Add/extend `server/services/taskService.ts` :
+       async function saveTaskFromHostAI(payload)
+       – Derive team_target & urgency (simple heuristics)
+       – Insert into tasks + task_attachments (Drizzle)
+       – Broadcast ws.broadcast("task:new", insertedTask)
+
+5. 📡  routes.ts
+   • `app.use("/api/webhooks", hostaiRouter)`
+
+6. ✅  Tests
+   • `tests/webhooks/hostai.spec.ts`
+     – 200 happy path (valid body + correct secret)
+     – 401 invalid secret
+     – 422 bad payload
+     – 409 duplicate external_id
+
+7. 📝  CHANGELOG.md
+   • Summarise breaking changes (removed HOSTAI_* env vars).
+
+ERROR HANDLING
+• 401 when secret mismatch.
+• 422 Zod validation error.
+• 409 duplicate task (external_id + listing_id unique).
+
+PERFORMANCE
+Total handler latency ≤200 ms incl. DB insert (99-percentile).
+
+AFTER CODING
+Run:
+  pnpm db:push && pnpm lint && pnpm test
+Ensure all tests green.
+
+OUTPUT
+Return full code diffs for every created/modified file plus commands to
+set WEBHOOK_SECRET in Replit Secrets:
+
+  replit secrets add WEBHOOK_SECRET="super_long_token"
