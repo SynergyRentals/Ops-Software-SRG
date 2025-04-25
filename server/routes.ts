@@ -96,10 +96,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SuiteOp webhook route with x-webhook-secret header
   app.post("/api/webhooks/suiteop", validateWebhookSecret("suiteop"), handleSuiteOpWebhook);
   
-  // HostAI webhook route with Bearer auth
-  app.post("/api/webhooks/hostai", handleHostAIWebhook);
+  // HostAI webhook route with optional auth - authentication checks handled flexibly within middleware
+  app.post("/api/webhooks/hostai", validateWebhookSecret("hostai"), handleHostAIWebhook);
   
-  // Alternative simpler webhook endpoint for HostAI
+  // Alternative simpler webhook endpoint for HostAI - no auth required for backward compatibility
   app.post("/webhook", handleHostAIWebhook);
   
   // Create HTTP server

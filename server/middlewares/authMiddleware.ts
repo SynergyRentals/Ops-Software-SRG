@@ -1,4 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
+import { User } from '@shared/schema';
+
+// Augment Express Request to have properly typed user
+declare global {
+  namespace Express {
+    interface User extends User {}
+  }
+}
 
 // Middleware to check if user is authenticated
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -41,12 +49,21 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 // Webhook authentication middleware
 export const validateWebhookSecret = (source: 'hostai' | 'suiteop') => {
   return (req: Request, res: Response, next: NextFunction) => {
+    // For HostAI, if no secret is defined in env, we don't enforce authentication
+    if (source === 'hostai' && !process.env.HOSTAI_WEBHOOK_SECRET) {
+      return next();
+    }
+    
     const webhookSecret = req.headers['x-webhook-secret'];
     const configSecret = source === 'hostai' 
       ? process.env.HOSTAI_WEBHOOK_SECRET 
       : process.env.SUITEOP_WEBHOOK_SECRET;
     
-    if (!webhookSecret || webhookSecret !== configSecret) {
+    // Check query parameter if header is not available (less secure, but sometimes necessary)
+    const querySecret = req.query.key as string;
+    
+    if ((!webhookSecret && !querySecret) || 
+        (webhookSecret !== configSecret && querySecret !== configSecret)) {
       return res.status(401).json({ message: 'Invalid webhook secret' });
     }
     
