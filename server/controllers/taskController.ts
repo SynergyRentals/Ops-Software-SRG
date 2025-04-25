@@ -52,39 +52,48 @@ export async function getTask(req: Request, res: Response) {
 // Create a new task
 export async function createTask(req: Request, res: Response) {
   try {
-    // Import the insertTaskSchema to validate the request body
-    const { insertTaskSchema } = await import('@shared/schema');
+    // Import the modules we need
+    const { TaskStatus } = await import('@shared/schema');
     const { broadcast } = await import('../services/websocketService');
     
     try {
-      // Validate the request body using Zod
-      const validatedData = insertTaskSchema.parse(req.body);
-      
-      // Ensure status is set
-      if (!validatedData.status) {
-        validatedData.status = TaskStatus.New;
-      }
-      
-      // Ensure rawPayload is set (using the request body as the payload if not provided)
-      if (!validatedData.rawPayload) {
-        validatedData.rawPayload = req.body;
-      }
+      // Prepare the task data - make sure to include required fields
+      let taskData = {
+        ...req.body,
+        status: req.body.status || TaskStatus.New,
+        // Store the original request body as rawPayload (required by Zod schema)
+        rawPayload: req.body 
+      };
       
       // Create the task
-      const task = await storage.createTask(validatedData);
+      const task = await storage.createTask(taskData);
       
       // Broadcast the new task to WebSocket clients
       broadcast('task:new', task);
       
       // Return the created task
       res.status(201).json(task);
-    } catch (zodError: any) {
-      // Handle Zod validation errors with a 422 status code
-      console.error('Zod validation error:', zodError.errors);
-      return res.status(422).json({ 
-        message: 'Invalid task data', 
-        errors: zodError.errors
-      });
+    } catch (dbError: any) {
+      // Handle database errors
+      if (dbError.code) {
+        // Database constraint violation or other SQL error
+        console.error('Database error creating task:', dbError);
+        return res.status(400).json({ 
+          message: 'Database error creating task', 
+          error: dbError.message 
+        });
+      }
+      
+      // Handle Zod validation errors if they come from storage layer
+      if (dbError.errors) {
+        console.error('Validation error:', dbError.errors);
+        return res.status(422).json({ 
+          message: 'Invalid task data', 
+          errors: dbError.errors
+        });
+      }
+      
+      throw dbError; // Re-throw unexpected errors
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

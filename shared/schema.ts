@@ -200,24 +200,28 @@ export const insertWebhookEventSchema = createInsertSchema(webhookEvents).pick({
   processed: true,
 });
 
-export const insertTaskSchema = createInsertSchema(tasks).pick({
-  externalId: true,
-  listingId: true,
-  listingName: true,
-  action: true,
-  description: true,
-  sourceType: true,
-  sourceLink: true,
-  guestName: true,
-  guestEmail: true,
-  guestPhone: true,
-  teamTarget: true,
-  urgency: true,
-  status: true,
-  watchCount: true,
-  scheduledFor: true,
-  closedAt: true,
-  rawPayload: true,
+// Create a base schema using drizzle-zod
+const baseTaskSchema = createInsertSchema(tasks);
+
+// Create a modified schema with more flexible validation for the frontend
+export const insertTaskSchema = z.object({
+  externalId: baseTaskSchema.shape.externalId.optional(),
+  listingId: baseTaskSchema.shape.listingId.optional(),
+  listingName: baseTaskSchema.shape.listingName,
+  action: baseTaskSchema.shape.action,
+  description: baseTaskSchema.shape.description.optional(),
+  sourceType: baseTaskSchema.shape.sourceType.optional(),
+  sourceLink: baseTaskSchema.shape.sourceLink.optional(),
+  guestName: baseTaskSchema.shape.guestName.optional(),
+  guestEmail: baseTaskSchema.shape.guestEmail.optional(),
+  guestPhone: baseTaskSchema.shape.guestPhone.optional(),
+  teamTarget: baseTaskSchema.shape.teamTarget,
+  urgency: baseTaskSchema.shape.urgency,
+  status: baseTaskSchema.shape.status.optional(),
+  watchCount: baseTaskSchema.shape.watchCount.optional(),
+  scheduledFor: baseTaskSchema.shape.scheduledFor.optional(),
+  closedAt: baseTaskSchema.shape.closedAt.optional(),
+  rawPayload: z.any(), // Allow any type for rawPayload to make it more flexible
 });
 
 export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).pick({
