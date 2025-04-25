@@ -15,20 +15,16 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     // Start timing for performance logging
     const startTime = Date.now();
     
-    // Authentication check - only if webhook secret is set
-    if (env.WEBHOOK_SECRET) {
+    // Authentication is now optional since HostAI doesn't support headers
+    // If a secret is set, we'll check for it, but we won't require it
+    if (env.WEBHOOK_SECRET && req.headers.authorization) {
       const authHeader = req.headers.authorization;
       
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ 
-          error: 'Unauthorized: Missing or invalid authorization header',
-          expected: 'Authorization: Bearer <token>'
-        });
-      }
-      
-      const token = authHeader.split(' ')[1];
-      if (token !== env.WEBHOOK_SECRET) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid webhook token' });
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        if (token !== env.WEBHOOK_SECRET) {
+          return res.status(401).json({ error: 'Unauthorized: Invalid webhook token' });
+        }
       }
     }
     

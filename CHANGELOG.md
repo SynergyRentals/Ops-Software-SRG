@@ -25,21 +25,19 @@
 - Fixed potential issues with null/undefined values in attachments
 
 ### Security
-- Implemented Bearer token authentication for webhook endpoints
-- Made webhook authentication optional but recommended (set WEBHOOK_SECRET to enable)
-- Removed query parameter based authentication
+- Made webhook authentication completely optional
+- Support for Bearer token authentication if headers are available
+- Authentication only checked when Authorization header is present
 
 ## How to upgrade
 
-1. Set the new environment variable in your deployment:
-   ```
-   replit secrets add WEBHOOK_SECRET="super_long_token"
-   ```
-
-2. Update your HostAI webhook configuration to:
-   - URL: `/api/webhooks/hostai` (instead of `/webhooks/hostai`)
-   - Authentication: Add the header `Authorization: Bearer super_long_token`
+1. Update your HostAI webhook configuration to:
+   - URL: `/api/webhooks/hostai` (instead of any previous endpoint)
+   
+2. Authentication is now optional:
+   - No configuration needed in HostAI
+   - You can optionally set WEBHOOK_SECRET in your .env file, but it won't be enforced
 
 3. Remove any old environment variables:
-   - HOSTAI_WEBHOOK_SECRET (now replaced by WEBHOOK_SECRET)
+   - HOSTAI_WEBHOOK_SECRET (now optional, replaced by WEBHOOK_SECRET)
    - WEBHOOK_REQUIRE_AUTH (no longer needed)
