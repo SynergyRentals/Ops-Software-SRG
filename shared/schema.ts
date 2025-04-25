@@ -214,7 +214,9 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   teamTarget: true,
   urgency: true,
   status: true,
+  watchCount: true,
   scheduledFor: true,
+  closedAt: true,
   rawPayload: true,
 });
 

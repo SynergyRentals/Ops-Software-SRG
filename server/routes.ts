@@ -14,6 +14,7 @@ import * as inventoryController from "./controllers/inventoryController";
 import * as scheduleController from "./controllers/scheduleController";
 import * as dashboardController from "./controllers/dashboardController";
 import * as taskController from "./controllers/taskController";
+import * as taskActions from "./controllers/taskActions";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static HTML pages
@@ -85,6 +86,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tasks", isAuthenticated, taskController.getTasks);
   app.get("/api/tasks/:id", isAuthenticated, taskController.getTask);
   app.patch("/api/tasks/:id", isAuthenticated, taskController.updateTask);
+  
+  // Task action routes
+  app.patch("/api/tasks/:id/watch", isAuthenticated, taskActions.watchTask);
+  app.patch("/api/tasks/:id/close", isAuthenticated, taskActions.closeTask);
   
   // Webhook routes
   // SuiteOp webhook route with x-webhook-secret header

@@ -1,26 +1,33 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Task } from '@shared/schema';
+import { Task, TaskStatus } from '@shared/schema';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+
+type TaskTab = 'new' | 'watching' | 'scheduled' | 'closed';
 
 export default function TaskInboxPage() {
+  // Active tab state
+  const [activeTab, setActiveTab] = useState<TaskTab>('new');
+  
   // WebSocket connection
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Query for tasks with status=new
+  // Query for tasks based on active tab/status
   const { 
     data: tasks, 
     isLoading, 
     isError,
     error 
   } = useQuery({
-    queryKey: ['/api/tasks', { status: 'new' }],
+    queryKey: ['/api/tasks', { status: activeTab }],
     queryFn: async () => {
-      const response = await fetch('/api/tasks?status=new');
+      const response = await fetch(`/api/tasks?status=${activeTab}`);
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -69,6 +76,82 @@ export default function TaskInboxPage() {
               return [message.data, ...oldData];
             }
           );
+        }
+        
+        // Handle 'task:updated' messages
+        else if (message.type === 'task:updated') {
+          console.log('Task updated:', message.data);
+          
+          const updatedTask = message.data as Task;
+          const status = updatedTask.status;
+          
+          // Handle different status updates with appropriate notifications
+          switch (status) {
+            case TaskStatus.Watch:
+              toast({
+                title: 'Task Watched',
+                description: `Task #${updatedTask.id} is now being watched`,
+                variant: 'default'
+              });
+              break;
+            case TaskStatus.Closed:
+              toast({
+                title: 'Task Closed',
+                description: `Task #${updatedTask.id} has been closed`,
+                variant: 'default'
+              });
+              break;
+            case TaskStatus.Scheduled:
+              toast({
+                title: 'Task Scheduled',
+                description: `Task #${updatedTask.id} has been scheduled`,
+                variant: 'default'
+              });
+              break;
+          }
+          
+          // Update all task lists in the cache to reflect the new status
+          // 1. Remove from previous status list (each possible status)
+          const statuses: TaskTab[] = ['new', 'watching', 'scheduled', 'closed'];
+          statuses.forEach(statusTab => {
+            queryClient.setQueryData<Task[]>(
+              ['/api/tasks', { status: statusTab }],
+              (oldData) => {
+                if (!oldData) return [];
+                return oldData.filter(task => task.id !== updatedTask.id);
+              }
+            );
+          });
+          
+          // 2. Add to new status list
+          const statusMapping: Record<string, TaskTab> = {
+            [TaskStatus.New]: 'new',
+            [TaskStatus.Watch]: 'watching', 
+            [TaskStatus.Scheduled]: 'scheduled',
+            [TaskStatus.Closed]: 'closed'
+          };
+          
+          const targetTab = statusMapping[status];
+          if (targetTab) {
+            queryClient.setQueryData<Task[]>(
+              ['/api/tasks', { status: targetTab }],
+              (oldData) => {
+                if (!oldData) return [updatedTask];
+                
+                // Check if already exists
+                const exists = oldData.some(task => task.id === updatedTask.id);
+                if (exists) {
+                  // Update existing task
+                  return oldData.map(task => 
+                    task.id === updatedTask.id ? updatedTask : task
+                  );
+                }
+                
+                // Add task to beginning of list
+                return [updatedTask, ...oldData];
+              }
+            );
+          }
         }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
@@ -127,6 +210,16 @@ export default function TaskInboxPage() {
     );
   }
 
+  // Get counts for tab badges (using the query client cache)
+  const getTabCount = (status: TaskTab): number => {
+    try {
+      const cachedData = queryClient.getQueryData<Task[]>(['/api/tasks', { status }]);
+      return cachedData?.length || 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+
   return (
     <MainLayout title="Task Inbox">
       <div className="space-y-4">
@@ -134,7 +227,7 @@ export default function TaskInboxPage() {
           <div>
             <h1 className="text-2xl font-bold">Task Inbox</h1>
             <p className="text-muted-foreground">
-              Review and assign incoming tasks
+              Review and manage all tasks
             </p>
           </div>
           
@@ -146,20 +239,62 @@ export default function TaskInboxPage() {
           </div>
         </div>
         
-        {(!tasks || tasks.length === 0) ? (
-          <div className="bg-muted p-8 text-center rounded-lg">
-            <h3 className="text-lg font-medium">No new tasks</h3>
-            <p className="text-muted-foreground mt-1">
-              All incoming tasks will appear here
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tasks.map((task: Task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
-        )}
+        <Tabs defaultValue="new" className="w-full" onValueChange={(value) => setActiveTab(value as TaskTab)}>
+          <TabsList className="grid grid-cols-4 w-full">
+            <TabsTrigger value="new">
+              New
+              {getTabCount('new') > 0 && (
+                <Badge variant="outline" className="ml-2 bg-blue-50">
+                  {getTabCount('new')}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="watching">
+              Watching
+              {getTabCount('watching') > 0 && (
+                <Badge variant="outline" className="ml-2 bg-amber-50">
+                  {getTabCount('watching')}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="scheduled">
+              Scheduled
+              {getTabCount('scheduled') > 0 && (
+                <Badge variant="outline" className="ml-2 bg-green-50">
+                  {getTabCount('scheduled')}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="closed">
+              Closed
+              {getTabCount('closed') > 0 && (
+                <Badge variant="outline" className="ml-2 bg-gray-50">
+                  {getTabCount('closed')}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab}>
+            {(!tasks || tasks.length === 0) ? (
+              <div className="bg-muted p-8 text-center rounded-lg mt-4">
+                <h3 className="text-lg font-medium">No {activeTab} tasks</h3>
+                <p className="text-muted-foreground mt-1">
+                  {activeTab === 'new' && 'New incoming tasks will appear here'}
+                  {activeTab === 'watching' && 'Tasks you\'re keeping an eye on will appear here'}
+                  {activeTab === 'scheduled' && 'Tasks that have been scheduled will appear here'}
+                  {activeTab === 'closed' && 'Completed tasks will appear here'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                {tasks.map((task: Task) => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
