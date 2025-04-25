@@ -11,22 +11,12 @@ import { ZodError } from 'zod';
  * @returns The extracted secret or undefined
  */
 function extractSecret(req: Request) {
-  // 1) Bearer token
   const auth = req.get("authorization");
-  if (auth?.startsWith("Bearer ")) return auth.split(" ")[1];
+  if (auth?.startsWith("Bearer ")) return auth.slice(7);
 
-  // 2) query ?secret=
   if (typeof req.query.secret === "string") return req.query.secret;
 
-  // 3) X-HostAI-Secret
-  const xHost = req.get("x-hostai-secret");
-  if (xHost) return xHost;
-
-  // 4) X-Webhook-Secret
-  const xGeneric = req.get("x-webhook-secret");
-  if (xGeneric) return xGeneric;
-
-  return undefined;
+  return req.get("x-hostai-secret") || req.get("x-webhook-secret");
 }
 
 /**
@@ -35,7 +25,9 @@ function extractSecret(req: Request) {
  * - Secret in URL query parameter (?secret=xyz)
  * - X-HostAI-Secret header
  * - X-Webhook-Secret header
- * - No auth if no WEBHOOK_SECRET is configured (development/staging only)
+ * - Authentication bypassed in development mode if no secret is supplied
+ * 
+ * Detailed debug logs are included to help troubleshoot authentication issues.
  * 
  * @param req Express request
  * @param res Express response
@@ -45,19 +37,19 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     // Start timing for performance logging
     const startTime = Date.now();
     
-    // Check if a webhook secret is configured or strict mode is forced via query param
-    const strictMode = req.query.strict_auth === 'true';
-    
-    if (!env.WEBHOOK_SECRET && !strictMode) {
-      // No webhook secret configured - log warning but allow access (for dev/staging)
-      console.warn('⚠️ WARNING: No WEBHOOK_SECRET configured. Webhook authentication is disabled. This is NOT recommended for production.');
-    } else {
-      const supplied = extractSecret(req);
-      // Use either the configured secret or a default test secret in strict mode
-      const configured = env.WEBHOOK_SECRET || (strictMode ? 'test-webhook-secret' : '');
+    const supplied = extractSecret(req);
+    const configured = env.WEBHOOK_SECRET;
 
-      if (configured && supplied !== configured) {
-        console.warn("Webhook auth failed. headers=", req.headers, "query=", req.query);
+    // === NEW DEBUG LOG =====================================================
+    console.info("🌐 HostAI webhook received",
+                { headers: req.headers, query: req.query, supplied, configured });
+    // =======================================================================
+
+    if (configured) {
+      // Secret is required in prod
+      if (!supplied && process.env.NODE_ENV === "development") {
+        console.warn("⚠️  No secret supplied but NODE_ENV=development – bypassing auth");
+      } else if (supplied !== configured) {
         return res.status(401).json({ message: "Invalid webhook secret" });
       }
     }
