@@ -80,14 +80,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/schedule/task", isAuthenticated, scheduleController.createScheduledTask);
   
   // Webhook routes
-  // Legacy webhook routes with x-webhook-secret header
+  // SuiteOp webhook route with x-webhook-secret header
   app.post("/api/webhooks/suiteop", validateWebhookSecret("suiteop"), handleSuiteOpWebhook);
-  app.post("/api/webhooks/hostai", validateWebhookSecret("hostai"), function(req, res) {
-    res.status(410).json({ message: 'This endpoint is deprecated. Please use /webhooks/hostai instead' });
-  });
   
-  // New secure webhook route with Bearer token auth
-  app.post("/webhooks/hostai", handleHostAIWebhook);
+  // HostAI webhook route with Bearer auth
+  app.post("/api/webhooks/hostai", handleHostAIWebhook);
   
   // Create HTTP server
   const httpServer = createServer(app);

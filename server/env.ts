@@ -17,7 +17,7 @@ const envSchema = z.object({
 const validateEnv = () => {
   try {
     return envSchema.parse(process.env);
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Invalid environment variables:", error.format());
     throw new Error("Invalid environment variables");
   }

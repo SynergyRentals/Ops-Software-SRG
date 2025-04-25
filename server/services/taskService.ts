@@ -1,38 +1,7 @@
 import { storage } from '../storage';
 import { type Task, type InsertTask, type TaskAttachment, type InsertTaskAttachment } from '@shared/schema';
 import { broadcast } from './websocketService';
-
-interface HostAIPayload {
-  task: {
-    action?: string;
-    description?: string;
-    assignee?: {
-      firstName?: string;
-      lastName?: string;
-    };
-  };
-  source?: {
-    sourceType?: string;
-    link?: string;
-  };
-  guest?: {
-    guestName?: string;
-    guestEmail?: string;
-    guestPhone?: string;
-  };
-  listing?: {
-    listingName?: string;
-    listingId?: string;
-  };
-  attachments?: Array<{
-    name?: string;
-    extension?: string;
-    url: string;
-  }>;
-  external_id?: string;
-  _creationDate?: string;
-  [key: string]: any;
-}
+import { type HostAiWebhookPayload } from '../webhooks/schemas';
 
 /**
  * Determine team target based on action text
@@ -151,7 +120,7 @@ export const determineUrgency = (action: string, description?: string): string =
  * @param payload - The HostAI webhook payload
  * @returns The saved task with its ID
  */
-export const saveHostAITask = async (payload: HostAIPayload): Promise<Task> => {
+export const saveTaskFromHostAI = async (payload: HostAiWebhookPayload): Promise<Task> => {
   try {
     // Extract required fields from payload
     const action = payload.task?.action || '';
@@ -185,10 +154,10 @@ export const saveHostAITask = async (payload: HostAIPayload): Promise<Task> => {
     
     // If attachments exist, save them
     if (payload.attachments && Array.isArray(payload.attachments) && payload.attachments.length > 0) {
-      const attachmentsData: InsertTaskAttachment[] = payload.attachments.map(attachment => ({
+      const attachmentsData: InsertTaskAttachment[] = payload.attachments.map((attachment) => ({
         taskId: task.id,
-        name: attachment.name,
-        extension: attachment.extension,
+        name: attachment.name || null,
+        extension: attachment.extension || null,
         url: attachment.url
       }));
       
