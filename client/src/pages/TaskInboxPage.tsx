@@ -7,7 +7,8 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
-type TaskTab = 'new' | 'watching' | 'scheduled' | 'closed';
+// Using the actual status values from the backend
+type TaskTab = 'new' | 'watch' | 'scheduled' | 'closed';
 
 export default function TaskInboxPage() {
   // Active tab state
@@ -112,7 +113,7 @@ export default function TaskInboxPage() {
           
           // Update all task lists in the cache to reflect the new status
           // 1. Remove from previous status list (each possible status)
-          const statuses: TaskTab[] = ['new', 'watching', 'scheduled', 'closed'];
+          const statuses: TaskTab[] = ['new', 'watch', 'scheduled', 'closed'];
           statuses.forEach(statusTab => {
             queryClient.setQueryData<Task[]>(
               ['/api/tasks', { status: statusTab }],
@@ -123,12 +124,14 @@ export default function TaskInboxPage() {
             );
           });
           
-          // 2. Add to new status list
-          const statusMapping: Record<string, TaskTab> = {
-            [TaskStatus.New]: 'new',
-            [TaskStatus.Watch]: 'watching', 
-            [TaskStatus.Scheduled]: 'scheduled',
-            [TaskStatus.Closed]: 'closed'
+          // 2. Add to new status list 
+          // Direct 1:1 mapping between backend values and UI tabs
+          // Map backend enum values to our UI tabs
+          const statusMapping = {
+            [TaskStatus.New]: 'new' as TaskTab,
+            [TaskStatus.Watch]: 'watch' as TaskTab, 
+            [TaskStatus.Scheduled]: 'scheduled' as TaskTab,
+            [TaskStatus.Closed]: 'closed' as TaskTab
           };
           
           const targetTab = statusMapping[status];
@@ -249,11 +252,11 @@ export default function TaskInboxPage() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="watching">
+            <TabsTrigger value="watch">
               Watching
-              {getTabCount('watching') > 0 && (
+              {getTabCount('watch') > 0 && (
                 <Badge variant="outline" className="ml-2 bg-amber-50">
-                  {getTabCount('watching')}
+                  {getTabCount('watch')}
                 </Badge>
               )}
             </TabsTrigger>
@@ -278,10 +281,10 @@ export default function TaskInboxPage() {
           <TabsContent value={activeTab}>
             {(!tasks || tasks.length === 0) ? (
               <div className="bg-muted p-8 text-center rounded-lg mt-4">
-                <h3 className="text-lg font-medium">No {activeTab} tasks</h3>
+                <h3 className="text-lg font-medium">No {activeTab === 'watch' ? 'watched' : activeTab} tasks</h3>
                 <p className="text-muted-foreground mt-1">
                   {activeTab === 'new' && 'New incoming tasks will appear here'}
-                  {activeTab === 'watching' && 'Tasks you\'re keeping an eye on will appear here'}
+                  {activeTab === 'watch' && 'Tasks you\'re keeping an eye on will appear here'}
                   {activeTab === 'scheduled' && 'Tasks that have been scheduled will appear here'}
                   {activeTab === 'closed' && 'Completed tasks will appear here'}
                 </p>
