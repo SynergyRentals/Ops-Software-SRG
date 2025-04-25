@@ -45,13 +45,16 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     // Start timing for performance logging
     const startTime = Date.now();
     
-    // Check if a webhook secret is configured
-    if (!env.WEBHOOK_SECRET) {
+    // Check if a webhook secret is configured or strict mode is forced via query param
+    const strictMode = req.query.strict_auth === 'true';
+    
+    if (!env.WEBHOOK_SECRET && !strictMode) {
       // No webhook secret configured - log warning but allow access (for dev/staging)
       console.warn('⚠️ WARNING: No WEBHOOK_SECRET configured. Webhook authentication is disabled. This is NOT recommended for production.');
     } else {
       const supplied = extractSecret(req);
-      const configured = env.WEBHOOK_SECRET;
+      // Use either the configured secret or a default test secret in strict mode
+      const configured = env.WEBHOOK_SECRET || (strictMode ? 'test-webhook-secret' : '');
 
       if (configured && supplied !== configured) {
         console.warn("Webhook auth failed. headers=", req.headers, "query=", req.query);
