@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Task } from '@shared/schema';
+import { Scheduler } from './Scheduler';
 
 interface TaskCardProps {
   task: Task;
@@ -232,7 +233,7 @@ export function TaskCard({ task }: TaskCardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap mb-4">
                 <Badge variant="outline" className={getTeamColorClass(selectedTeam || '')}>
                   {selectedTeam ? (selectedTeam.charAt(0).toUpperCase() + selectedTeam.slice(1)) : 'Team'}
                 </Badge>
@@ -241,9 +242,16 @@ export function TaskCard({ task }: TaskCardProps) {
                 </Badge>
               </div>
               
-              <p className="text-sm text-muted-foreground">
-                Scheduler component will be implemented here
-              </p>
+              <Scheduler 
+                task={task} 
+                onSchedule={() => {
+                  // After scheduling, go back to main task list
+                  setIsFlipped(false);
+                  // Invalidate tasks to refresh the list
+                  queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+                }}
+                onCancel={() => setIsFlipped(false)}
+              />
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">

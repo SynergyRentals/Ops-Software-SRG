@@ -79,6 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Schedule routes
   app.post("/api/schedule", isAuthenticated, scheduleController.getAiScheduleSuggestions);
   app.post("/api/schedule/task", isAuthenticated, scheduleController.createScheduledTask);
+  app.get("/api/tasks/:id/suggestions", isAuthenticated, scheduleController.getTaskScheduleSuggestions);
   
   // Task routes
   app.get("/api/tasks", isAuthenticated, taskController.getTasks);
