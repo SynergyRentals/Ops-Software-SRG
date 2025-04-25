@@ -1,23 +1,28 @@
 /**
- * Test script to verify the updated webhook authentication changes
+ * Test script to set a WEBHOOK_SECRET and verify that authentication works
+ * This script should be run from the terminal with:
+ * WEBHOOK_SECRET=test-secret NODE_ENV=production node test_webhook_with_secret.js
  */
 import fetch from 'node-fetch';
 
 const BASE_URL = 'http://localhost:5000';
+const CORRECT_SECRET = 'test-secret'; // Should match what you set in WEBHOOK_SECRET env var
+const WRONG_SECRET = 'wrong-secret';
 
-async function testWebhookWithNoSecret() {
-  console.log('Testing webhook with no secret in development mode...');
+async function testWithCorrectSecret() {
+  console.log('Testing webhook with correct secret...');
   try {
     const response = await fetch(`${BASE_URL}/api/webhooks/hostai`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-HostAI-Secret': CORRECT_SECRET
       },
       body: JSON.stringify({
         external_id: `test-${Date.now()}`,
         task: {
           action: 'Test Task',
-          description: 'This is a test task'
+          description: 'This is a test task with correct secret'
         },
         guest: {
           guestName: 'Test Guest'
@@ -30,9 +35,9 @@ async function testWebhookWithNoSecret() {
     
     console.log(`Status: ${response.status}`);
     if (response.status === 201) {
-      console.log('✅ Test passed: No secret in development mode returns 201');
+      console.log('✅ Test passed: Correct secret returns 201');
     } else {
-      console.log('❌ Test failed: Expected 201 in development mode with no secret');
+      console.log('❌ Test failed: Expected 201 but got ' + response.status);
     }
     
     const data = await response.json();
@@ -42,21 +47,14 @@ async function testWebhookWithNoSecret() {
   }
 }
 
-async function testWebhookWithWrongSecret() {
-  console.log('\nTesting webhook with wrong secret in production mode...');
-  
-  // Save original NODE_ENV
-  const originalNodeEnv = process.env.NODE_ENV;
-  
+async function testWithWrongSecret() {
+  console.log('\nTesting webhook with wrong secret...');
   try {
-    // Set NODE_ENV to production for this test
-    process.env.NODE_ENV = 'production';
-    
     const response = await fetch(`${BASE_URL}/api/webhooks/hostai`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-HostAI-Secret': 'wrong-secret'
+        'X-HostAI-Secret': WRONG_SECRET
       },
       body: JSON.stringify({
         external_id: `test-${Date.now()}`,
@@ -75,24 +73,25 @@ async function testWebhookWithWrongSecret() {
     
     console.log(`Status: ${response.status}`);
     if (response.status === 401) {
-      console.log('✅ Test passed: Wrong secret in production mode returns 401');
+      console.log('✅ Test passed: Wrong secret returns 401');
     } else {
-      console.log('❌ Test failed: Expected 401 in production mode with wrong secret');
+      console.log('❌ Test failed: Expected 401 but got ' + response.status);
     }
     
-    const data = await response.json();
-    console.log('Response:', JSON.stringify(data, null, 2));
+    try {
+      const data = await response.json();
+      console.log('Response:', JSON.stringify(data, null, 2));
+    } catch (e) {
+      console.log('No valid JSON response');
+    }
   } catch (error) {
     console.error('Error:', error);
-  } finally {
-    // Restore original NODE_ENV
-    process.env.NODE_ENV = originalNodeEnv;
   }
 }
 
 async function runTests() {
-  await testWebhookWithNoSecret();
-  await testWebhookWithWrongSecret();
+  await testWithCorrectSecret();
+  await testWithWrongSecret();
   console.log('\nAll tests completed.');
 }
 
