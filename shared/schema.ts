@@ -125,8 +125,10 @@ export const tasks = pgTable("tasks", {
   teamTarget: text("team_target", { enum: ["internal", "cleaning", "maintenance", "landlord"] }).notNull().default(TaskTeamTarget.Internal),
   urgency: text("urgency", { enum: ["urgent", "high", "medium", "low"] }).notNull().default(TaskUrgency.Medium),
   status: text("status", { enum: ["new", "scheduled", "watch", "closed"] }).notNull().default(TaskStatus.New),
+  watchCount: integer("watch_count").notNull().default(0),
   scheduledFor: timestamp("scheduled_for"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  closedAt: timestamp("closed_at"),
   rawPayload: jsonb("raw_payload").notNull(),
 });
 
