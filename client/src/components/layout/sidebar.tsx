@@ -9,7 +9,8 @@ import {
   Settings,
   Timer,
   Info,
-  LogOut
+  LogOut,
+  Inbox
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,11 @@ export function Sidebar({ className }: SidebarProps) {
       label: "Dashboard",
       icon: <Home className="mr-3 h-5 w-5" />,
       href: "/"
+    },
+    {
+      label: "Tasks",
+      icon: <Inbox className="mr-3 h-5 w-5" />,
+      href: "/tasks"
     },
     {
       label: "Schedule",
