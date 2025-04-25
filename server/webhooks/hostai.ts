@@ -37,21 +37,18 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     // Start timing for performance logging
     const startTime = Date.now();
     
-    const supplied = extractSecret(req);
-    const configured = env.WEBHOOK_SECRET;
-
-    // === NEW DEBUG LOG =====================================================
-    console.info("🌐 HostAI webhook received",
-                { headers: req.headers, query: req.query, supplied, configured });
-    // =======================================================================
-
-    if (configured) {
-      // Secret is required in prod
-      if (!supplied && process.env.NODE_ENV === "development") {
-        console.warn("⚠️  No secret supplied but NODE_ENV=development – bypassing auth");
-      } else if (supplied !== configured) {
-        return res.status(401).json({ message: "Invalid webhook secret" });
-      }
+    // Print all headers and query params BEFORE auth check
+    console.info("🌐 HostAI webhook", {headers: req.headers, query: req.query});
+    
+    // New consolidated auth check implementation
+    const supplied = req.get("authorization")?.replace("Bearer ","")
+             || req.query.secret
+             || req.get("x-hostai-secret")
+             || req.get("x-webhook-secret");
+             
+    if (env.WEBHOOK_SECRET && supplied !== env.WEBHOOK_SECRET
+        && process.env.NODE_ENV === "production") {
+      return res.status(401).json({message: "Invalid webhook secret"});
     }
     
     // Validate payload against schema
