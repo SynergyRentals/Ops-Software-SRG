@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { insertTaskSchema, TaskTeamTarget, TaskUrgency, TaskStatus, Property } from '@shared/schema';
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { PlusCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -24,36 +23,45 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle } from 'lucide-react';
+} from "@/components/ui/select";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { TaskStatus, TaskTeamTarget, TaskUrgency } from "@shared/schema";
+import { type Property } from "@shared/schema";
 
-// Extend the insert schema with form validation rules
-const createTaskSchema = insertTaskSchema.extend({
-  listingName: z.string().min(2, 'Property name must be at least 2 characters'),
-  action: z.string().min(2, 'Action must be at least 2 characters'),
+// Create a schema for task creation
+const createTaskSchema = z.object({
+  listingName: z.string().min(1, { message: "Property is required" }),
+  action: z.string().min(3, { message: "Action/title must be at least 3 characters" }),
   description: z.string().optional(),
   teamTarget: z.enum([
     TaskTeamTarget.Internal,
     TaskTeamTarget.Cleaning,
     TaskTeamTarget.Maintenance,
-    TaskTeamTarget.Landlord
+    TaskTeamTarget.Landlord,
   ]),
   urgency: z.enum([
     TaskUrgency.Urgent,
     TaskUrgency.High,
     TaskUrgency.Medium,
-    TaskUrgency.Low
+    TaskUrgency.Low,
   ]),
+  externalId: z.string().optional(),
+  status: z.enum([
+    TaskStatus.New,
+    TaskStatus.Watch,
+    TaskStatus.Scheduled,
+    TaskStatus.Closed,
+  ]).optional()
 }).omit({ id: true, status: true, watchCount: true, closedAt: true });
 
 type CreateTaskFormValues = z.infer<typeof createTaskSchema>;
@@ -127,125 +135,66 @@ export function CreateTaskDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="default" className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          Create Task
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
-          <DialogDescription>
-            Create a new task for a property. Fill out the details below.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="listingName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isLoadingProperties}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a property" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingProperties ? (
-                        <SelectItem value="loading" disabled>Loading properties...</SelectItem>
-                      ) : properties && properties.length > 0 ? (
-                        properties.map((property) => (
-                          <SelectItem 
-                            key={property.id} 
-                            value={property.nickname || property.title || `Property ${property.id}`}
-                          >
-                            {property.nickname || property.title || `Property ${property.id}`}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>No properties found</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Select the property this task is for
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="action"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Action/Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Clean bathroom" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    A short title describing what needs to be done
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="e.g., Deep clean bathroom, including shower, toilet, and sink" 
-                      className="resize-none" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Provide additional details about the task (optional)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
+    <>
+      <Button 
+        variant="default" 
+        className="gap-2"
+        onClick={() => setOpen(true)}
+      >
+        <PlusCircle className="h-4 w-4" />
+        Create Task
+      </Button>
+      
+      <Dialog 
+        open={open} 
+        onOpenChange={setOpen}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+            <DialogDescription>
+              Create a new task for a property. Fill out the details below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="teamTarget"
+                name="listingName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Team</FormLabel>
+                    <FormLabel>Property</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isLoadingProperties}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select team" />
+                          <SelectValue placeholder="Select a property" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={TaskTeamTarget.Internal}>Internal</SelectItem>
-                        <SelectItem value={TaskTeamTarget.Cleaning}>Cleaning</SelectItem>
-                        <SelectItem value={TaskTeamTarget.Maintenance}>Maintenance</SelectItem>
-                        <SelectItem value={TaskTeamTarget.Landlord}>Landlord</SelectItem>
+                        {isLoadingProperties ? (
+                          <SelectItem value="loading" disabled>Loading properties...</SelectItem>
+                        ) : properties && properties.length > 0 ? (
+                          properties.map((property) => (
+                            <SelectItem 
+                              key={property.id} 
+                              value={property.nickname || property.title || `Property ${property.id}`}
+                            >
+                              {property.nickname || property.title || `Property ${property.id}`}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>No properties found</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
+                    <FormDescription>
+                      Select the property this task is for
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -253,51 +202,118 @@ export function CreateTaskDialog() {
               
               <FormField
                 control={form.control}
-                name="urgency"
+                name="action"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Urgency</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select urgency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={TaskUrgency.Urgent}>Urgent</SelectItem>
-                        <SelectItem value={TaskUrgency.High}>High</SelectItem>
-                        <SelectItem value={TaskUrgency.Medium}>Medium</SelectItem>
-                        <SelectItem value={TaskUrgency.Low}>Low</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Action/Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Clean bathroom" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      A short title describing what needs to be done
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Creating...' : 'Create Task'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="e.g., Deep clean bathroom, including shower, toilet, and sink" 
+                        className="resize-none" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Provide additional details about the task (optional)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="teamTarget"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Team</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select team" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={TaskTeamTarget.Internal}>Internal</SelectItem>
+                          <SelectItem value={TaskTeamTarget.Cleaning}>Cleaning</SelectItem>
+                          <SelectItem value={TaskTeamTarget.Maintenance}>Maintenance</SelectItem>
+                          <SelectItem value={TaskTeamTarget.Landlord}>Landlord</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="urgency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Urgency</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select urgency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={TaskUrgency.Urgent}>Urgent</SelectItem>
+                          <SelectItem value={TaskUrgency.High}>High</SelectItem>
+                          <SelectItem value={TaskUrgency.Medium}>Medium</SelectItem>
+                          <SelectItem value={TaskUrgency.Low}>Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Task'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
