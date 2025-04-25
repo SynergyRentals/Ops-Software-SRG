@@ -1,0 +1,76 @@
+GOAL
+Make the end-to-end “Create Task” flow work:
+  • POST /api/tasks  ⟶ stored in DB
+  • WebSocket “task:new” broadcast fires
+  • React-Query list in <TaskInboxPage> refreshes
+  • After selecting team + urgency, card flips to scheduler and
+    PATCH /api/tasks/:id updates scheduled_for + status.
+
+CONTEXT
+Repo path examples
+  /server/controllers/taskController.ts
+  /server/routes.ts
+  /server/services/taskService.ts
+  /server/websockets/index.ts
+  /client/src/pages/TaskInboxPage.tsx
+  /client/src/components/tasks/TaskCard.tsx
+  /client/src/components/tasks/Scheduler.tsx
+
+SYMPTOMS
+• FE console shows blank list or stale data after creating a task.
+• BE logs “Zod validation error” when POSTing.
+• WS “task:new” sometimes missing.
+• Scheduler PATCH 200 OK but UI doesn’t update.
+
+TASKS
+1. ✅ UNIT TEST FIRST
+   • Add Vitest + Supertest test:
+     – POST /api/tasks  ⇒ 200
+     – DB contains new row, ws mock received “task:new”.
+
+2. 🔍 BACKEND DIAGNOSE
+   • Verify Zod schema in taskController matches FE payload:
+       { action, description, listingId, listingName, attachments? }
+   • Confirm route path /api/tasks (POST) & /api/tasks/:id (PATCH)
+     are registered in server/routes.ts.
+   • Ensure taskService.save() inserts scheduled_for =NULL
+     and status='new' by default, then broadcasts.
+
+3. 🔧 BACKEND FIXES
+   • Align Zod schema & DTO to FE payload.
+   • Return complete Task object (id, status, etc.) in response
+     and in WS broadcast.
+
+4. 🚀 FRONTEND DIAGNOSE
+   • In TaskInboxPage.tsx: React-Query key must include
+     status filter → `/api/tasks?status=new`.
+   • After POST success OR ws “task:new”, invalidate the same key.
+   • TaskCard optimistic update should mutate Query cache or wait
+     for ws “task:update”.
+
+5. 🔧 FRONTEND FIXES
+   • Add useWebSocket hook that listens for task:new / task:update
+     and queryClient.invalidateQueries(['tasks','new']).
+   • Ensure TaskCard flips only after both team_target & urgency chosen.
+   • Scheduler.tsx: after PATCH success → broadcast or mutate cache.
+
+6. 🔁 E2E CHECK
+   • Cypress (or Playwright) test:
+     a) Visit /tasks   (list empty)
+     b) Click “Create task”, fill dummy, submit.
+     c) Expect card to appear without refresh.
+     d) Select team + urgency ➜ card flips, schedule, PATCH,
+        expect status badge 'scheduled'.
+
+7. 📝 CHANGELOG
+   • List updated files, new tests, and any breaking API response change.
+
+ERROR HANDLING
+• All controllers must return 422 with detailed message on Zod failure.
+• WebSocket send wrapped in try/catch → log but don’t crash server.
+
+RUN AFTER CODING
+```bash
+pnpm db:push --dry-run         # ensure no pending migrations
+pnpm lint
+pnpm test
