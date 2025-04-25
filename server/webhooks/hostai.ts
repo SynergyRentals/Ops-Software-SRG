@@ -6,9 +6,35 @@ import { hostAiWebhookSchema } from './schemas';
 import { ZodError } from 'zod';
 
 /**
+ * Extract webhook secret from various sources in the request
+ * @param req Express request
+ * @returns The extracted secret or undefined
+ */
+function extractSecret(req: Request) {
+  // 1) Bearer token
+  const auth = req.get("authorization");
+  if (auth?.startsWith("Bearer ")) return auth.split(" ")[1];
+
+  // 2) query ?secret=
+  if (typeof req.query.secret === "string") return req.query.secret;
+
+  // 3) X-HostAI-Secret
+  const xHost = req.get("x-hostai-secret");
+  if (xHost) return xHost;
+
+  // 4) X-Webhook-Secret
+  const xGeneric = req.get("x-webhook-secret");
+  if (xGeneric) return xGeneric;
+
+  return undefined;
+}
+
+/**
  * Handle HostAI webhook requests on a single static endpoint with flexible authentication:
  * - Bearer token in Authorization header
  * - Secret in URL query parameter (?secret=xyz)
+ * - X-HostAI-Secret header
+ * - X-Webhook-Secret header
  * - No auth if no WEBHOOK_SECRET is configured (development/staging only)
  * 
  * @param req Express request
@@ -24,33 +50,12 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
       // No webhook secret configured - log warning but allow access (for dev/staging)
       console.warn('⚠️ WARNING: No WEBHOOK_SECRET configured. Webhook authentication is disabled. This is NOT recommended for production.');
     } else {
-      // Secret is configured, so we need to validate it
-      let isAuthenticated = false;
-      
-      // Method 1: Check Authorization header (Bearer token)
-      if (req.headers.authorization) {
-        const authHeader = req.headers.authorization;
-        
-        if (authHeader.startsWith('Bearer ')) {
-          const token = authHeader.split(' ')[1];
-          if (token === env.WEBHOOK_SECRET) {
-            isAuthenticated = true;
-          }
-        }
-      }
-      
-      // Method 2: Check query parameter
-      const querySecret = req.query.secret as string;
-      if (querySecret && querySecret === env.WEBHOOK_SECRET) {
-        isAuthenticated = true;
-      }
-      
-      // If neither authentication method passed, return 401 Unauthorized
-      if (!isAuthenticated) {
-        return res.status(401).json({ 
-          error: 'Unauthorized: Invalid webhook token', 
-          message: 'Please provide a valid secret either via Authorization: Bearer header or ?secret=xyz query parameter'
-        });
+      const supplied = extractSecret(req);
+      const configured = env.WEBHOOK_SECRET;
+
+      if (configured && supplied !== configured) {
+        console.warn("Webhook auth failed. headers=", req.headers, "query=", req.query);
+        return res.status(401).json({ message: "Invalid webhook secret" });
       }
     }
     
