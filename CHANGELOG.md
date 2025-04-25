@@ -13,6 +13,7 @@
 - Added proper error handling with status codes (401, 409, 422, 500)
 - Added comprehensive test suite for webhook endpoint with all supported status codes
 - Added performance monitoring for webhook processing
+- Added an alternative simpler webhook URL (`/webhook`) for compatibility
 
 ### Changed
 - Renamed saveHostAITask to saveTaskFromHostAI for clarity
@@ -31,8 +32,11 @@
 
 ## How to upgrade
 
-1. Update your HostAI webhook configuration to:
-   - URL: `/api/webhooks/hostai` (instead of any previous endpoint)
+1. Update your HostAI webhook configuration to one of these URLs:
+   - Main URL: `https://maintenance-tracker-synergyrentalst.replit.app/api/webhooks/hostai`
+   - Alternative simpler URL: `https://maintenance-tracker-synergyrentalst.replit.app/webhook`
+   
+   If one URL doesn't work with HostAI, try the alternative URL.
    
 2. Authentication is now optional:
    - No configuration needed in HostAI

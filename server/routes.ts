@@ -86,6 +86,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HostAI webhook route with Bearer auth
   app.post("/api/webhooks/hostai", handleHostAIWebhook);
   
+  // Alternative simpler webhook endpoint for HostAI
+  app.post("/webhook", handleHostAIWebhook);
+  
   // Create HTTP server
   const httpServer = createServer(app);
   
