@@ -15,28 +15,30 @@ PropertyHub can receive and process webhook events from HostAI to automatically 
 
 2. **Authentication Options**:
 
-   For production use, we recommend using a secure, randomly-generated token with the Bearer authentication method. Set the following environment variables:
+   For production use, we recommend using a secure, randomly-generated token. Set the following environment variable:
 
    ```
    WEBHOOK_SECRET=your-secure-random-token
    ```
 
-   In your HostAI configuration, set the Authorization header:
+   The webhook endpoint supports two authentication methods:
+
+   **Method 1**: Bearer token in Authorization header (recommended for production)
    ```
    Authorization: Bearer your-secure-random-token
    ```
 
-   If your webhook provider doesn't support custom headers, you can use URL query parameters (less secure but sometimes necessary):
+   **Method 2**: Query parameter in URL (useful for HostAI test UI that can't set headers)
    ```
-   https://your-app-url/webhooks/hostai?key=your-secure-random-token
+   https://your-app-url/webhooks/hostai?secret=your-secure-random-token
    ```
 
-3. **Development Options**:
+3. **Development/Staging Options**:
 
-   For testing in development environments, the system provides flexible authentication options:
+   For testing in development or staging environments:
 
-   - A default development webhook secret is provided: `dev-webhook-secret-placeholder-do-not-use-in-prod`
-   - Authentication can be disabled in development by setting `WEBHOOK_REQUIRE_AUTH=false` (NOT recommended for production)
+   - If no `WEBHOOK_SECRET` is set in the environment, authentication will be disabled with a warning log
+   - This allows for easy testing but is NOT recommended for production environments
 
 ### Webhook Payload Format
 
@@ -98,8 +100,9 @@ Tasks created via webhooks are immediately available in the dashboard and trigge
 
 ### Testing the Webhook
 
-You can test the webhook locally using curl:
+You can test the webhook locally using curl with either authentication method:
 
+**Method 1**: Using Authorization header (recommended)
 ```bash
 curl -X POST http://localhost:5000/webhooks/hostai \
 -H "Content-Type: application/json" \
@@ -118,6 +121,27 @@ curl -X POST http://localhost:5000/webhooks/hostai \
     "listingId": "test-property-id"
   },
   "external_id": "test-webhook-123"
+}'
+```
+
+**Method 2**: Using query parameter (for services that can't set headers)
+```bash
+curl -X POST "http://localhost:5000/webhooks/hostai?secret=your-webhook-secret" \
+-H "Content-Type: application/json" \
+-d '{
+  "task": {
+    "action": "Test webhook task",
+    "description": "This is a test task from the webhook"
+  },
+  "guest": {
+    "guestName": "Test Guest",
+    "guestEmail": "test@example.com"
+  },
+  "listing": {
+    "listingName": "Test Property",
+    "listingId": "test-property-id"
+  },
+  "external_id": "test-webhook-456"
 }'
 ```
 
