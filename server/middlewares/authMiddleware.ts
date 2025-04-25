@@ -1,10 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '@shared/schema';
+
+// We need a simple interface that just has the role property for auth checks
+interface UserWithRole {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  [key: string]: any;
+}
 
 // Augment Express Request to have properly typed user
 declare global {
   namespace Express {
-    interface User extends User {}
+    // This tells TypeScript about the shape of req.user
+    interface User extends UserWithRole {}
   }
 }
 
