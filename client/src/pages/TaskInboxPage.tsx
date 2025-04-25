@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Task, TaskStatus } from '@shared/schema';
 import { TaskCard } from '@/components/tasks/TaskCard';
+import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -234,11 +235,14 @@ export default function TaskInboxPage() {
             </p>
           </div>
           
-          <div className="flex items-center">
-            <div className={`h-3 w-3 rounded-full mr-2 ${socket ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-sm text-muted-foreground">
-              {socket ? 'Connected' : 'Disconnected'}
-            </span>
+          <div className="flex items-center gap-4">
+            <CreateTaskDialog />
+            <div className="flex items-center">
+              <div className={`h-3 w-3 rounded-full mr-2 ${socket ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-muted-foreground">
+                {socket ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
           </div>
         </div>
         
