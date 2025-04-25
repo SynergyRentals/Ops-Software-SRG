@@ -109,7 +109,20 @@ export function CreateTaskDialog() {
       };
       
       console.log('Sending task data to API:', taskData);
-      const result = await apiRequest('POST', '/api/tasks', taskData);
+      const response = await apiRequest('POST', '/api/tasks', taskData);
+      
+      if (!response.ok) {
+        let errorMsg = 'Failed to create task';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        throw new Error(errorMsg);
+      }
+      
+      const result = await response.json();
       console.log('API response:', result);
       
       // Invalidate the tasks query to refresh data
@@ -129,7 +142,7 @@ export function CreateTaskDialog() {
       console.error('Error creating task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create task. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to create task. Please try again.',
         variant: 'destructive',
       });
     } finally {
