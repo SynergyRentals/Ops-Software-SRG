@@ -13,6 +13,7 @@ import * as maintenanceController from "./controllers/maintenanceController";
 import * as inventoryController from "./controllers/inventoryController";
 import * as scheduleController from "./controllers/scheduleController";
 import * as dashboardController from "./controllers/dashboardController";
+import * as taskController from "./controllers/taskController";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static HTML pages
@@ -78,6 +79,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Schedule routes
   app.post("/api/schedule", isAuthenticated, scheduleController.getAiScheduleSuggestions);
   app.post("/api/schedule/task", isAuthenticated, scheduleController.createScheduledTask);
+  
+  // Task routes
+  app.get("/api/tasks", isAuthenticated, taskController.getTasks);
+  app.get("/api/tasks/:id", isAuthenticated, taskController.getTask);
+  app.patch("/api/tasks/:id", isAuthenticated, taskController.updateTask);
   
   // Webhook routes
   // SuiteOp webhook route with x-webhook-secret header

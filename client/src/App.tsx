@@ -13,6 +13,7 @@ import Inventory from "@/pages/inventory";
 import Properties from "@/pages/properties";
 import Schedule from "@/pages/schedule";
 import Settings from "@/pages/settings";
+import TaskInboxPage from "@/pages/TaskInboxPage";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <ProtectedRoute path="/properties" component={Properties} />
       <ProtectedRoute path="/schedule" component={Schedule} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/tasks" component={TaskInboxPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

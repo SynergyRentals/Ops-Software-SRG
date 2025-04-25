@@ -24,9 +24,10 @@ export async function getTasks(req: Request, res: Response) {
     const tasks = await storage.getTasks(filters);
     
     res.status(200).json(tasks);
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ message: 'Failed to fetch tasks', error: error.message });
+    res.status(500).json({ message: 'Failed to fetch tasks', error: errorMessage });
   }
 }
 
@@ -41,9 +42,10 @@ export async function getTask(req: Request, res: Response) {
     }
     
     res.status(200).json(task);
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error fetching task ${req.params.id}:`, error);
-    res.status(500).json({ message: 'Failed to fetch task', error: error.message });
+    res.status(500).json({ message: 'Failed to fetch task', error: errorMessage });
   }
 }
 
@@ -60,7 +62,9 @@ export async function updateTask(req: Request, res: Response) {
     const validUpdates = Object.keys(taskData)
       .filter(key => allowedUpdates.includes(key))
       .reduce((obj, key) => {
-        obj[key] = taskData[key];
+        if (allowedUpdates.includes(key)) {
+          (obj as any)[key] = taskData[key as keyof typeof taskData];
+        }
         return obj;
       }, {} as Partial<InsertTask>);
     
@@ -71,8 +75,9 @@ export async function updateTask(req: Request, res: Response) {
     }
     
     res.status(200).json(updatedTask);
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error updating task ${req.params.id}:`, error);
-    res.status(500).json({ message: 'Failed to update task', error: error.message });
+    res.status(500).json({ message: 'Failed to update task', error: errorMessage });
   }
 }
