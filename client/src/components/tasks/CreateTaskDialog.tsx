@@ -99,6 +99,7 @@ export function CreateTaskDialog() {
 
   async function onSubmit(data: CreateTaskFormValues) {
     setIsSubmitting(true);
+    console.log('Form submission data:', data);
 
     try {
       // Add the status field explicitly
@@ -107,7 +108,9 @@ export function CreateTaskDialog() {
         status: TaskStatus.New // Set the initial status to "new"
       };
       
+      console.log('Sending task data to API:', taskData);
       const result = await apiRequest('POST', '/api/tasks', taskData);
+      console.log('API response:', result);
       
       // Invalidate the tasks query to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });

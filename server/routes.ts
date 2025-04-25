@@ -84,6 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Task routes
   app.get("/api/tasks", isAuthenticated, taskController.getTasks);
+  app.post("/api/tasks", isAuthenticated, taskController.createTask);
   app.get("/api/tasks/:id", isAuthenticated, taskController.getTask);
   app.patch("/api/tasks/:id", isAuthenticated, taskController.updateTask);
   

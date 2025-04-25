@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { storage } from '../storage';
-import { InsertTask } from '@shared/schema';
+import { InsertTask, TaskStatus } from '@shared/schema';
 
 // Get all tasks with optional filters
 export async function getTasks(req: Request, res: Response) {
@@ -46,6 +46,28 @@ export async function getTask(req: Request, res: Response) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error fetching task ${req.params.id}:`, error);
     res.status(500).json({ message: 'Failed to fetch task', error: errorMessage });
+  }
+}
+
+// Create a new task
+export async function createTask(req: Request, res: Response) {
+  try {
+    const taskData: InsertTask = req.body;
+    
+    // Ensure status is set
+    if (!taskData.status) {
+      taskData.status = TaskStatus.New;
+    }
+    
+    // Create the task
+    const task = await storage.createTask(taskData);
+    
+    // Return the created task
+    res.status(201).json(task);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating task:', error);
+    res.status(500).json({ message: 'Failed to create task', error: errorMessage });
   }
 }
 
