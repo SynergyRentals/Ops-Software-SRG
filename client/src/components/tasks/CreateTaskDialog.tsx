@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { insertTaskSchema, TaskTeamTarget, TaskUrgency, TaskStatus } from '@shared/schema';
+import { insertTaskSchema, TaskTeamTarget, TaskUrgency, TaskStatus, Property } from '@shared/schema';
 
 import {
   Dialog,
@@ -63,6 +63,19 @@ export function CreateTaskDialog() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Fetch properties for the dropdown
+  const { data: properties, isLoading: isLoadingProperties } = useQuery({
+    queryKey: ['/api/property'],
+    queryFn: async () => {
+      const response = await fetch('/api/property');
+      if (!response.ok) {
+        throw new Error('Failed to fetch properties');
+      }
+      return response.json() as Promise<Property[]>;
+    },
+    enabled: open, // Only fetch when dialog is open
+  });
 
   // Initialize form with default values
   const form = useForm<CreateTaskFormValues>({
@@ -136,12 +149,36 @@ export function CreateTaskDialog() {
               name="listingName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 2111 S 9th Bottom" {...field} />
-                  </FormControl>
+                  <FormLabel>Property</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={isLoadingProperties}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a property" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {isLoadingProperties ? (
+                        <SelectItem value="loading" disabled>Loading properties...</SelectItem>
+                      ) : properties && properties.length > 0 ? (
+                        properties.map((property) => (
+                          <SelectItem 
+                            key={property.id} 
+                            value={property.title || property.nickname || `Property ${property.id}`}
+                          >
+                            {property.title || property.nickname || `Property ${property.id}`}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No properties found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                   <FormDescription>
-                    Enter the property this task is for
+                    Select the property this task is for
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
