@@ -5,10 +5,13 @@ async function testWebhookInvalidAuth() {
   console.log('Testing webhook with invalid authentication');
   console.log('--------------------------------------------------------------------------------');
   
-  // Set a dummy environment variable for testing invalid auth
-  if (!process.env.WEBHOOK_SECRET) {
-    process.env.WEBHOOK_SECRET = 'test-webhook-secret';
-  }
+  // Set environment variables for this process only - this will not affect the server
+  process.env.WEBHOOK_SECRET = 'test-webhook-secret';
+  
+  console.log('Note: This test only works if the server has WEBHOOK_SECRET set.');
+  console.log('Since we cannot set environment variables for the running server from this script,');
+  console.log('we need to manually set it on the server side to test authentication failure.');
+  console.log('--------------------------------------------------------------------------------');
   
   const externalId = `test-webhook-invalid-auth-${Date.now()}`;
   
