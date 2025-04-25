@@ -126,7 +126,8 @@ export function CreateTaskDialog() {
       console.log('API response:', result);
       
       // Invalidate the tasks query to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      // Specifically invalidate the 'new' tasks query as that's where the task will appear
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', { status: 'new' }] });
       
       // Show success toast
       toast({

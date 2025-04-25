@@ -52,18 +52,40 @@ export async function getTask(req: Request, res: Response) {
 // Create a new task
 export async function createTask(req: Request, res: Response) {
   try {
-    const taskData: InsertTask = req.body;
+    // Import the insertTaskSchema to validate the request body
+    const { insertTaskSchema } = await import('@shared/schema');
+    const { broadcast } = await import('../services/websocketService');
     
-    // Ensure status is set
-    if (!taskData.status) {
-      taskData.status = TaskStatus.New;
+    try {
+      // Validate the request body using Zod
+      const validatedData = insertTaskSchema.parse(req.body);
+      
+      // Ensure status is set
+      if (!validatedData.status) {
+        validatedData.status = TaskStatus.New;
+      }
+      
+      // Ensure rawPayload is set (using the request body as the payload if not provided)
+      if (!validatedData.rawPayload) {
+        validatedData.rawPayload = req.body;
+      }
+      
+      // Create the task
+      const task = await storage.createTask(validatedData);
+      
+      // Broadcast the new task to WebSocket clients
+      broadcast('task:new', task);
+      
+      // Return the created task
+      res.status(201).json(task);
+    } catch (zodError: any) {
+      // Handle Zod validation errors with a 422 status code
+      console.error('Zod validation error:', zodError.errors);
+      return res.status(422).json({ 
+        message: 'Invalid task data', 
+        errors: zodError.errors
+      });
     }
-    
-    // Create the task
-    const task = await storage.createTask(taskData);
-    
-    // Return the created task
-    res.status(201).json(task);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error creating task:', error);
@@ -74,40 +96,60 @@ export async function createTask(req: Request, res: Response) {
 // Update a task
 export async function updateTask(req: Request, res: Response) {
   try {
+    const { broadcast } = await import('../services/websocketService');
     const taskId = Number(req.params.id);
-    const taskData: Partial<InsertTask> = req.body;
     
-    // Validate the fields we allow to update
-    const allowedUpdates = ['teamTarget', 'urgency', 'status', 'scheduledFor'];
-    
-    // Filter out any fields that are not allowed to be updated
-    const validUpdates = Object.keys(taskData)
-      .filter(key => allowedUpdates.includes(key))
-      .reduce((obj, key) => {
-        if (allowedUpdates.includes(key)) {
-          // Special handling for dates
-          if (key === 'scheduledFor' && taskData.scheduledFor) {
-            try {
-              // Convert ISO string to Date object, or keep Date object as is
-              (obj as any)[key] = new Date(taskData.scheduledFor);
-            } catch (err) {
-              console.error("Failed to parse scheduledFor date:", err);
-              throw new Error("Invalid date format for scheduledFor");
+    // Validate the request body with Zod partially
+    try {
+      const taskData: Partial<InsertTask> = req.body;
+      
+      // Validate the fields we allow to update
+      const allowedUpdates = ['teamTarget', 'urgency', 'status', 'scheduledFor'];
+      
+      // Filter out any fields that are not allowed to be updated
+      const validUpdates = Object.keys(taskData)
+        .filter(key => allowedUpdates.includes(key))
+        .reduce((obj, key) => {
+          if (allowedUpdates.includes(key)) {
+            // Special handling for dates
+            if (key === 'scheduledFor' && taskData.scheduledFor) {
+              try {
+                // Convert ISO string to Date object, or keep Date object as is
+                (obj as any)[key] = new Date(taskData.scheduledFor);
+              } catch (err) {
+                console.error("Failed to parse scheduledFor date:", err);
+                throw new Error("Invalid date format for scheduledFor");
+              }
+            } else {
+              (obj as any)[key] = taskData[key as keyof typeof taskData];
             }
-          } else {
-            (obj as any)[key] = taskData[key as keyof typeof taskData];
           }
-        }
-        return obj;
-      }, {} as Partial<InsertTask>);
-    
-    const updatedTask = await storage.updateTask(taskId, validUpdates);
-    
-    if (!updatedTask) {
-      return res.status(404).json({ message: 'Task not found' });
+          return obj;
+        }, {} as Partial<InsertTask>);
+      
+      // Update the task in storage
+      const updatedTask = await storage.updateTask(taskId, validUpdates);
+      
+      if (!updatedTask) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Broadcast the updated task to WebSocket clients
+      broadcast('task:updated', updatedTask);
+      
+      // Return the updated task
+      res.status(200).json(updatedTask);
+    } catch (zodError: any) {
+      // Handle Zod validation errors with a 422 status code
+      if (zodError.errors) {
+        console.error('Zod validation error:', zodError.errors);
+        return res.status(422).json({ 
+          message: 'Invalid task data for update', 
+          errors: zodError.errors
+        });
+      }
+      throw zodError; // Re-throw if it's not a Zod validation error
     }
-    
-    res.status(200).json(updatedTask);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error updating task ${req.params.id}:`, error);
