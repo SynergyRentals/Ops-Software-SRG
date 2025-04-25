@@ -167,9 +167,9 @@ export function CreateTaskDialog() {
                         properties.map((property) => (
                           <SelectItem 
                             key={property.id} 
-                            value={property.title || property.nickname || `Property ${property.id}`}
+                            value={property.nickname || property.title || `Property ${property.id}`}
                           >
-                            {property.title || property.nickname || `Property ${property.id}`}
+                            {property.nickname || property.title || `Property ${property.id}`}
                           </SelectItem>
                         ))
                       ) : (
