@@ -123,7 +123,6 @@ export async function createScheduledTask(req: Request, res: Response) {
       urgency: urgency || TaskUrgency.Medium,
       status: 'scheduled',
       scheduledFor: new Date(scheduledFor),
-      createdAt: new Date(),
       rawPayload: {}
     };
     

@@ -63,7 +63,18 @@ export async function updateTask(req: Request, res: Response) {
       .filter(key => allowedUpdates.includes(key))
       .reduce((obj, key) => {
         if (allowedUpdates.includes(key)) {
-          (obj as any)[key] = taskData[key as keyof typeof taskData];
+          // Special handling for dates
+          if (key === 'scheduledFor' && taskData.scheduledFor) {
+            try {
+              // Convert ISO string to Date object, or keep Date object as is
+              (obj as any)[key] = new Date(taskData.scheduledFor);
+            } catch (err) {
+              console.error("Failed to parse scheduledFor date:", err);
+              throw new Error("Invalid date format for scheduledFor");
+            }
+          } else {
+            (obj as any)[key] = taskData[key as keyof typeof taskData];
+          }
         }
         return obj;
       }, {} as Partial<InsertTask>);
