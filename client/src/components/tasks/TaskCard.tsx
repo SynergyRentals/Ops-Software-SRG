@@ -254,7 +254,7 @@ export function TaskCard({ task }: TaskCardProps) {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between">
+          <CardFooter className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -262,14 +262,6 @@ export function TaskCard({ task }: TaskCardProps) {
               disabled={isLoading}
             >
               Back
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => updateTaskField('status', 'scheduled')}
-              disabled={isLoading}
-            >
-              Schedule
             </Button>
           </CardFooter>
         </Card>

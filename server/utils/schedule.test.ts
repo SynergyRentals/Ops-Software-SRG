@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { suggestSchedule, parseReservations } from './schedule';
-import { Task, TaskUrgency } from '@shared/schema';
+import { Task, TaskUrgency } from '../../shared/schema';
 import { format, addDays, setHours, setMinutes, parseISO } from 'date-fns';
 
 const createMockTask = (urgency: string = TaskUrgency.Medium): Task => {
@@ -19,6 +19,7 @@ const createMockTask = (urgency: string = TaskUrgency.Medium): Task => {
     teamTarget: "maintenance",
     urgency: urgency as any,
     status: "new",
+    scheduledFor: null,
     createdAt: new Date(),
     rawPayload: {}
   };
