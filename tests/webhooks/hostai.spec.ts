@@ -79,6 +79,39 @@ describe('HostAI Webhook Handler', () => {
     },
     external_id: 'test-external-id'
   };
+
+  // Full HostAI payload as per their spec
+  const fullHostAIPayload = {
+    task: {
+      action: 'Fix leaking faucet',
+      description: 'The kitchen sink faucet is leaking and needs repair',
+      assignee: { 
+        firstName: 'John', 
+        lastName: 'Doe' 
+      }
+    },
+    source: {
+      sourceType: 'TaskSource',
+      link: 'https://example.com/task/12345'
+    },
+    attachments: [
+      { 
+        name: 'photo', 
+        extension: 'jpg', 
+        url: 'https://example.com/photo.jpg' 
+      }
+    ],
+    guest: {
+      guestName: 'Test Guest',
+      guestEmail: 'guest@example.com',
+      guestPhone: '123-456-7890'
+    },
+    listing: {
+      listingName: 'Test Property',
+      listingId: 'prop-123'
+    },
+    _creationDate: '2023-04-25T14:30:00Z'
+  };
   
   it('should return 201 with valid payload and correct secret', async () => {
     const response = await supertest(app)
@@ -165,5 +198,38 @@ describe('HostAI Webhook Handler', () => {
     
     expect(response.status).toBe(500);
     expect(response.body.error).toBe('Internal server error processing webhook');
+  });
+
+  it('accepts full HostAI payload and generates external_id', async () => {
+    // We need to capture the external_id that gets generated
+    mockSaveTask.mockImplementation(payload => {
+      return Promise.resolve({ 
+        id: 2, 
+        externalId: payload.external_id 
+      });
+    });
+
+    const response = await supertest(app)
+      .post('/api/webhooks/hostai')
+      .set('Authorization', 'Bearer test-webhook-secret')
+      .send(fullHostAIPayload);
+    
+    expect(response.status).toBe(201);
+    expect(response.body.status).toBe('success');
+    
+    // Verify the external_id was generated
+    expect(mockSaveTask).toHaveBeenCalled();
+    const savedPayload = mockSaveTask.mock.calls[0][0];
+    expect(savedPayload.external_id).toBeDefined();
+    
+    // Verify that all fields from the payload were passed to the saveTask function
+    expect(savedPayload.task.action).toBe(fullHostAIPayload.task.action);
+    expect(savedPayload.task.description).toBe(fullHostAIPayload.task.description);
+    expect(savedPayload.task.assignee).toEqual(fullHostAIPayload.task.assignee);
+    expect(savedPayload.source).toEqual(fullHostAIPayload.source);
+    expect(savedPayload.attachments).toEqual(fullHostAIPayload.attachments);
+    expect(savedPayload.guest).toEqual(fullHostAIPayload.guest);
+    expect(savedPayload.listing).toEqual(fullHostAIPayload.listing);
+    expect(savedPayload._creationDate).toBe(fullHostAIPayload._creationDate);
   });
 });

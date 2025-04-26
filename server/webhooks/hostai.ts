@@ -64,7 +64,8 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     try {
       const data = hostAiWebhookSchema.parse(req.body);
 
-      const externalId = crypto.createHash("sha1")
+      // Generate a fallback external_id if one isn't provided in the payload
+      const externalId = data.external_id || crypto.createHash("sha1")
         .update(`${data.listing.listingId}|${data._creationDate}`)
         .digest("hex");
 
