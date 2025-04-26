@@ -63,24 +63,41 @@ describe('HostAI Webhook Handler', () => {
     vi.clearAllMocks();
   });
   
-  // Valid payload for testing
+  // Complete valid payload for all tests
   const validPayload = {
     task: {
       action: 'Fix leaking faucet',
-      description: 'The kitchen sink faucet is leaking and needs repair'
+      description: 'The kitchen sink faucet is leaking and needs repair',
+      assignee: { 
+        firstName: 'John', 
+        lastName: 'Doe' 
+      }
     },
+    source: {
+      sourceType: 'TaskSource',
+      link: 'https://example.com/task/12345'
+    },
+    attachments: [
+      { 
+        name: 'photo', 
+        extension: 'jpg', 
+        url: 'https://example.com/photo.jpg' 
+      }
+    ],
     guest: {
       guestName: 'Test Guest',
-      guestEmail: 'guest@example.com'
+      guestEmail: 'guest@example.com',
+      guestPhone: '123-456-7890'
     },
     listing: {
       listingName: 'Test Property',
       listingId: 'prop-123'
     },
+    _creationDate: '2023-04-25T14:30:00Z',
     external_id: 'test-external-id'
   };
 
-  // Full HostAI payload as per their spec
+  // Full HostAI payload as per their spec (without external_id for testing auto-generation)
   const fullHostAIPayload = {
     task: {
       action: 'Fix leaking faucet',
