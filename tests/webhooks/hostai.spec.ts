@@ -26,7 +26,18 @@ vi.mock('../../server/env', () => ({
 import { saveTaskFromHostAI } from '../../server/services/taskService';
 import { storage } from '../../server/storage';
 
+// Mock process.env
+const originalEnv = process.env;
+
 describe('HostAI Webhook Handler', () => {
+  // Set NODE_ENV to production for authentication tests
+  beforeEach(() => {
+    process.env = { ...originalEnv, NODE_ENV: 'production' };
+  });
+  
+  afterEach(() => {
+    process.env = originalEnv;
+  });
   let app: express.Express;
   let mockGetTaskByExternalId: any;
   let mockSaveTask: any;
@@ -104,10 +115,14 @@ describe('HostAI Webhook Handler', () => {
   });
   
   it('should return 422 with invalid payload', async () => {
-    // Missing required 'external_id' field
+    // Missing required task.action field
     const invalidPayload = {
       task: {
-        action: 'Fix leaking faucet'
+        description: 'This payload is missing the required action field'
+      },
+      listing: {
+        listingName: 'Test Property',
+        listingId: 'prop-123'
       }
     };
     

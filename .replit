@@ -15,64 +15,44 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 33257
-externalPort = 3001
-
-[[ports]]
-localPort = 33693
-externalPort = 8008
-
-[[ports]]
-localPort = 34717
-externalPort = 4200
-
-[[ports]]
-localPort = 35769
-externalPort = 5000
-
-[[ports]]
-localPort = 36213
-externalPort = 6800
-
-[[ports]]
-localPort = 36269
+localPort = 33051
 externalPort = 3003
 
 [[ports]]
-localPort = 37731
-externalPort = 9000
+localPort = 33079
+externalPort = 3001
 
 [[ports]]
-localPort = 38121
-externalPort = 8081
+localPort = 34425
+externalPort = 6800
 
 [[ports]]
-localPort = 39741
-externalPort = 6000
+localPort = 36915
+externalPort = 4200
 
 [[ports]]
-localPort = 40049
-externalPort = 5173
-
-[[ports]]
-localPort = 42289
+localPort = 37515
 externalPort = 3000
 
 [[ports]]
-localPort = 43473
-externalPort = 8099
-
-[[ports]]
-localPort = 44003
-externalPort = 8000
-
-[[ports]]
-localPort = 44703
+localPort = 37803
 externalPort = 3002
 
 [[ports]]
-localPort = 46115
-externalPort = 8080
+localPort = 40007
+externalPort = 9000
+
+[[ports]]
+localPort = 42421
+externalPort = 6000
+
+[[ports]]
+localPort = 44497
+externalPort = 5000
+
+[[ports]]
+localPort = 45661
+externalPort = 5173
 
 [workflows]
 runButton = "Restart application"
