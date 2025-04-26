@@ -11,6 +11,7 @@ const envSchema = z.object({
   // Webhooks
   WEBHOOK_SECRET: z.string().optional(),
   SUITEOP_WEBHOOK_SECRET: z.string().min(16).optional(),
+  ALLOW_NO_SECRET: z.string().optional(),
 });
 
 // Validate environment variables

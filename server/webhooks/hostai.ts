@@ -46,10 +46,26 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
              || req.query.secret
              || req.get("x-hostai-secret")
              || req.get("x-webhook-secret");
-             
-    if (env.WEBHOOK_SECRET && supplied !== env.WEBHOOK_SECRET
-        && process.env.NODE_ENV === "production") {
-      return res.status(401).json({message: "Invalid webhook secret"});
+    
+    // Check if secret bypass is allowed
+    const bypass = env.ALLOW_NO_SECRET === "true";
+    
+    // In production mode with a webhook secret
+    if (env.WEBHOOK_SECRET && process.env.NODE_ENV === "production") {
+      // If a secret is supplied, it must be valid regardless of bypass setting
+      if (supplied && supplied !== env.WEBHOOK_SECRET) {
+        return res.status(401).json({message: "Invalid webhook secret"});
+      }
+      
+      // If no secret is supplied and bypass is not enabled, reject the request
+      if (!supplied && !bypass) {
+        return res.status(401).json({message: "Missing webhook secret"});
+      }
+    }
+    
+    // Log a warning if bypass is active and no secret is supplied
+    if (bypass && !supplied) {
+      console.warn("⚠️ Secret bypass active (ALLOW_NO_SECRET=true)");
     }
     
     // Validate payload against schema
