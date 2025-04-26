@@ -38,8 +38,43 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     // Start timing for performance logging
     const startTime = Date.now();
     
-    // Print all headers and query params BEFORE auth check
-    console.info("🌐 HostAI webhook", {headers: req.headers, query: req.query});
+    // Enhanced debugging - Print ALL request information
+    console.info("🌐 HostAI webhook request received", {
+      headers: req.headers,
+      query: req.query,
+      contentType: req.get('Content-Type'),
+      contentLength: req.get('Content-Length'),
+      method: req.method,
+      path: req.path
+    });
+    
+    // Log the raw body content to diagnose parsing issues
+    console.info("📦 HostAI webhook raw body:", {
+      bodyType: typeof req.body,
+      bodyEmpty: !req.body || Object.keys(req.body).length === 0,
+      bodyContent: req.body
+    });
+    
+    // Verify Content-Type header
+    const contentType = req.get('Content-Type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error("❌ Invalid Content-Type header:", contentType);
+      return res.status(400).json({
+        error: 'Invalid Content-Type',
+        message: 'The request must have Content-Type: application/json',
+        receivedContentType: contentType
+      });
+    }
+    
+    // Verify body is not empty
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.error("❌ Empty request body");
+      return res.status(400).json({
+        error: 'Empty Request Body',
+        message: 'The request body is empty or was not parsed as JSON properly',
+        tip: 'Ensure you are sending a valid JSON payload with Content-Type: application/json'
+      });
+    }
     
     // New consolidated auth check implementation
     const supplied = req.get("authorization")?.replace("Bearer ","")
@@ -62,6 +97,11 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
     
     // Validate payload against schema
     try {
+      // Ensure we have a valid object to parse
+      if (typeof req.body !== 'object') {
+        throw new Error('Request body is not a valid object');
+      }
+      
       const data = hostAiWebhookSchema.parse(req.body);
 
       // Generate a fallback external_id if one isn't provided in the payload
@@ -112,20 +152,59 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
       
     } catch (error) {
       if (error instanceof ZodError) {
+        // Enhanced Zod validation error logging
         console.error("❌ HostAI Zod validation failed", {
           issues: error.errors, 
-          body: req.body
+          body: req.body,
+          bodyType: typeof req.body,
+          bodyKeys: req.body ? Object.keys(req.body) : 'no keys'
         });
+        
+        // Detailed response for validation errors
         return res.status(422).json({ 
           error: 'Validation Error', 
           details: error.format(),
-          message: 'The webhook payload failed validation'
+          message: 'The webhook payload failed validation',
+          requiredStructure: {
+            task: {
+              action: "string - REQUIRED",
+              description: "string - REQUIRED",
+              assignee: {
+                firstName: "string - REQUIRED",
+                lastName: "string - REQUIRED"
+              }
+            },
+            source: { sourceType: "string", link: "string" },
+            attachments: [{ name: "string?", extension: "string?", url: "URL string" }],
+            guest: { guestName: "string", guestEmail: "string", guestPhone: "string" },
+            listing: { listingName: "string", listingId: "string" },
+            _creationDate: "ISO date string",
+            external_id: "string (optional)"
+          }
+        });
+      } else if (error instanceof Error) {
+        console.error("❌ Error in HostAI webhook payload processing:", error.message);
+        return res.status(400).json({
+          error: 'Request Processing Error',
+          message: error.message,
+          tip: 'Check that your request body is properly formatted JSON'
         });
       }
       throw error; // re-throw for the outer try/catch
     }
   } catch (error) {
-    console.error('Error handling HostAI webhook:', error);
-    return res.status(500).json({ error: 'Internal server error processing webhook' });
+    // Enhanced general error logging
+    console.error('❌ Error handling HostAI webhook:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      requestBody: req.body,
+      requestHeaders: req.headers
+    });
+    
+    return res.status(500).json({ 
+      error: 'Internal server error processing webhook',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      tip: 'Check server logs for details and ensure your JSON payload is properly formatted'
+    });
   }
 };
