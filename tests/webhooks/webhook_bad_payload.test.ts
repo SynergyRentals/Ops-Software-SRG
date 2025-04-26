@@ -95,8 +95,8 @@ describe('HostAI Webhook Handler - Bad Payload Validation', () => {
   });
   
   it('should reject payloads with missing task object', async () => {
-    const invalidPayload = { ...baseValidPayload };
-    delete invalidPayload.task;
+    // Create a new payload without the task property
+    const { task, ...invalidPayload } = baseValidPayload;
     
     const response = await supertest(app)
       .post('/api/webhooks/hostai')

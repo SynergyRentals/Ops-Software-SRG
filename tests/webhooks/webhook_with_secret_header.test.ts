@@ -18,10 +18,19 @@ vi.mock('../../server/storage', () => ({
 // Mock the env to simulate production environment with a secret
 vi.mock('../../server/env', () => ({
   env: {
-    NODE_ENV: 'production',
     WEBHOOK_SECRET: 'test-webhook-secret'
   }
 }));
+
+// Also need to mock process.env for authentication
+const originalEnv = process.env;
+beforeEach(() => {
+  process.env = { ...originalEnv, NODE_ENV: 'production' };
+});
+
+afterEach(() => {
+  process.env = originalEnv;
+});
 
 // Import mocks
 import { saveTaskFromHostAI } from '../../server/services/taskService';
