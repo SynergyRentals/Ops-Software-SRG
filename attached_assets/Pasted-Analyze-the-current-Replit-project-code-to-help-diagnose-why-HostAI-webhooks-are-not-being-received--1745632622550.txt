@@ -1,0 +1,101 @@
+Analyze the current Replit project code to help diagnose why HostAI webhooks are not being received. HostAI sends webhooks via POST request with a JSON payload to a specific URL endpoint in this application.
+
+Here's what I need you to investigate and report on:
+
+1.  **Identify potential webhook endpoint(s):** Look for Python code that defines HTTP routes using frameworks like Flask (e.g., lines starting with `@app.route`). Try to identify any route that looks like it's intended to receive webhooks, especially paths containing "webhook", "hostai", "task", or similar keywords.
+2.  **Check HTTP Method:** For any identified potential webhook endpoint(s), verify if the route is configured to accept `POST` requests (e.g., `methods=['POST']`).
+3.  **Check JSON Parsing:** Within the code handling the potential webhook endpoint(s), check if it attempts to read the incoming request body as JSON (e.g., using `request.json` if using Flask).
+4.  **Look for basic request handling:** See if there's code to read the request method, path, or headers.
+5.  **Report findings:** Summarize what you found regarding the webhook endpoint(s), the accepted HTTP methods, and the JSON parsing logic.
+6.  **Suggest code improvements:** Based on your findings, suggest specific code modifications needed to ensure there is a route accepting POST requests at a likely webhook path and that it correctly attempts to parse the incoming JSON payload from HostAI. Also, suggest adding basic logging at the start of the handler function to confirm if requests are even reaching that code.
+
+Remember, HostAI sends a POST request with a JSON payload like this:
+```json
+{
+  "task": { ... },
+  "source": { ... },
+  "attachments": [ ... ],
+  "guest": { ... },
+  "listing": { ... },
+  "_creationDate": "..."
+}
+Ensure the code is set up to receive this kind of request.
+
+
+**Step 3: Interpret Agent V2's Output and Apply Fixes**
+
+Read the response from Replit Agent V2 carefully. It will tell you what it found in your code.
+
+* **If the agent says it couldn't find a route that looks like a webhook endpoint:** You need to add one. Follow the agent's suggestion for adding a `@app.route` that accepts POST requests at the path you configured in HostAI (e.g., `/webhook`).
+* **If the agent found a route but says it doesn't accept POST:** Modify the `@app.route` decorator to include `methods=['POST']`.
+    ```python
+    @app.route('/your-webhook-path', methods=['POST'])
+    def handle_webhook():
+        # ... rest of your code
+    ```
+* **If the agent found a route that accepts POST but doesn't see JSON parsing:** Add code inside your webhook handling function to access the JSON body.
+    ```python
+    from flask import request, jsonify
+
+    @app.route('/your-webhook-path', methods=['POST'])
+    def handle_webhook():
+        # Add this line to get the JSON data
+        data = request.json
+
+        if data is None:
+            # Handle case where payload is not JSON or is empty
+            print("Received request, but payload is not JSON or is empty")
+            return jsonify({"status": "error", "message": "Request must be JSON"}), 415 # Or appropriate error code
+
+        print("Received webhook data:", data) # Log the received data
+
+        # Now you can process the 'data' dictionary according to the HostAI payload structure
+        # ... your processing logic here ...
+
+        return jsonify({"status": "success"}), 200 # Send a success response
+    ```
+* **Add Logging:** Regardless of what the agent finds, add logging at the very beginning of your webhook function to confirm if the code is even being executed when HostAI sends a webhook.
+
+    ```python
+    from flask import request, jsonify
+    import logging # Import logging module
+
+    # Configure basic logging (you might have this elsewhere)
+    logging.basicConfig(level=logging.INFO)
+
+    @app.route('/your-webhook-path', methods=['POST'])
+    def handle_webhook():
+        logging.info(f"Webhook received! Method: {request.method}, Path: {request.path}, Headers: {request.headers}")
+
+        data = request.json
+
+        if data is None:
+            logging.warning("Received webhook, but payload is not JSON or is empty.")
+            return jsonify({"status": "error", "message": "Request must be JSON"}), 415
+
+        logging.info(f"Received webhook data: {data}")
+
+        # ... process the data ...
+
+        return jsonify({"status": "success"}), 200
+    ```
+    Check the Replit console output for these log messages when you test.
+
+**Step 4: Test Again**
+
+1.  Ensure your Replit application is running.
+2.  Trigger a test webhook from your HostAI settings.
+3.  Check your Replit console output for the log messages you added in Step 3.
+    * If you see the "Webhook received!" log, the request is reaching your code.
+    * If you then see the "Received webhook data:" log followed by the payload, the JSON parsing is working.
+    * If you see the "payload is not JSON" warning, the request reached your code but the body wasn't valid JSON, which might indicate an issue on the HostAI side or a content-type mismatch (though HostAI should send `application/json`).
+
+**Summary of Steps:**
+
+1.  Get your correct public Replit URL and ensure it's configured in HostAI.
+2.  Use the provided prompt in Replit Agent V2 to analyze your code.
+3.  Based on the agent's report, modify your Flask application code to ensure a route exists, accepts POST, and parses JSON (`request.json`).
+4.  Add logging to the start of your webhook handler function.
+5.  Run your application, trigger a test webhook from HostAI, and check your Replit console logs to see if the request is received and processed.
+
+This process leverages the agent to understand your specific codebase and guides you through the necessary checks and fixes based on common webhook integration requirements.
