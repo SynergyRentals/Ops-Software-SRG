@@ -65,7 +65,7 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
       const data = hostAiWebhookSchema.parse(req.body);
 
       const externalId = crypto.createHash("sha1")
-        .update(`${data.listing?.listingId}|${data._creationDate}`)
+        .update(`${data.listing.listingId}|${data._creationDate}`)
         .digest("hex");
 
       // Check for idempotency - don't process the same request twice
@@ -111,6 +111,10 @@ export const handleHostAIWebhook = async (req: Request, res: Response) => {
       
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error("❌ HostAI Zod validation failed", {
+          issues: error.errors, 
+          body: req.body
+        });
         return res.status(422).json({ 
           error: 'Validation Error', 
           details: error.format(),
