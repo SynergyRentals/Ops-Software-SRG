@@ -99,6 +99,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HostAI webhook route - no auth required since HostAI doesn't support headers
   app.post("/api/webhooks/hostai", handleHostAIWebhook);
   
+  // Add the path that matches the HostAI documentation/requirements
+  app.post("/webhooks/hostai", handleHostAIWebhook);
+  
   // Alternative simpler webhook endpoint for HostAI - no auth required for backward compatibility
   app.post("/webhook", handleHostAIWebhook);
   
