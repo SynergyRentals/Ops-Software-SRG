@@ -29,7 +29,7 @@ export const hostAiWebhookSchema = z.object({
     listingId: z.string().optional(),
   }).optional(),
   attachments: z.array(hostAiAttachmentSchema).optional(),
-  external_id: z.string(),
+  external_id: z.string().optional(),
   _creationDate: z.string().optional(),
 }).catchall(z.unknown());
 
