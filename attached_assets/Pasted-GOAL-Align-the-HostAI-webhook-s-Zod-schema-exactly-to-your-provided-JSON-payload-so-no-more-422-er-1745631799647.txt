@@ -1,0 +1,118 @@
+GOAL  
+Align the HostAI webhook’s Zod schema exactly to your provided JSON payload so no more 422 errors.
+
+CONTEXT  
+You’ve confirmed `express.json()` is in place and you’re now receiving the full payload. The JSON looks like:
+
+```json
+{
+  "task": {
+    "action": "string",
+    "description": "string",
+    "assignee": { "firstName": "string", "lastName": "string" }
+  },
+  "source": {
+    "sourceType": "TaskSource",
+    "link": "string"
+  },
+  "attachments": [
+    { "name": "string?", "extension": "string?", "url": "string" }
+  ],
+  "guest": {
+    "guestName": "string",
+    "guestEmail": "string",
+    "guestPhone": "string"
+  },
+  "listing": {
+    "listingName": "string",
+    "listingId": "string"
+  },
+  "_creationDate": "string"
+}
+TASKS
+
+Update Zod schema in server/webhooks/schemas.ts:
+
+ts
+Copy
+Edit
+import { z } from "zod";
+
+const attachmentSchema = z.object({
+  name:      z.string().optional(),
+  extension: z.string().optional(),
+  url:       z.string().url()
+});
+
+export const hostAiWebhookSchema = z.object({
+  task: z.object({
+    action:      z.string(),
+    description: z.string(),
+    assignee: z.object({
+      firstName: z.string(),
+      lastName:  z.string()
+    })
+  }),
+  source: z.object({
+    sourceType: z.string(),
+    link:       z.string()
+  }),
+  attachments: z.array(attachmentSchema),
+  guest: z.object({
+    guestName:  z.string(),
+    guestEmail: z.string(),
+    guestPhone: z.string()
+  }),
+  listing: z.object({
+    listingName: z.string(),
+    listingId:   z.string()
+  }),
+  _creationDate: z.string()
+}).catchall(z.unknown());
+Ensure handler uses this schema in server/webhooks/hostai.ts:
+
+ts
+Copy
+Edit
+const data = hostAiWebhookSchema.parse(req.body);
+Generate fallback external_id (if not already):
+
+ts
+Copy
+Edit
+import crypto from "crypto";
+const externalId = crypto
+  .createHash("sha1")
+  .update(`${data.listing.listingId}|${data._creationDate}`)
+  .digest("hex");
+await saveTaskFromHostAI({ ...data, external_id: externalId });
+Add a quick test in tests/webhooks/hostai.spec.ts:
+
+ts
+Copy
+Edit
+it("accepts full HostAI payload", async () => {
+  await supertest(app)
+    .post("/api/webhooks/hostai")
+    .send(samplePayload) // the exact JSON above
+    .set("Content-Type", "application/json")
+    .expect(200);
+});
+CHANGELOG.md:
+
+markdown
+Copy
+Edit
+- Updated Zod schema to require `description`, `attachments[]`, and all nested fields per HostAI spec.
+- Payload now matches HostAI “Send Test” exactly.
+AFTER APPLYING
+
+bash
+Copy
+Edit
+pnpm lint && pnpm test
+EXPECTED OUTCOME
+
+HostAI “Send Test” → 200 OK
+
+No more 422; tasks populate in your inbox.
